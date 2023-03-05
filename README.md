@@ -23,14 +23,19 @@ If you want to know the details, please use the following command:
 ./build/bin/xally -h
 ```
 then you will get the following tips:
-> xally version: xally/0.0.1
-> Usage: xally [-hl] [-p history_path]
-> 
-> Options:
->   -h	show the help message
->   -l	flag to log history (default true)
->   -p string
->     	specify chat history path (default "data")
+```bash
+xally version: xally/0.0.2
+Usage: xally [-hl] [-p history_path] [-w language_preference]
+
+Options:
+  -h	show the help message
+  -l	flag to log history (default true)
+  -p string
+    	specify chat history path (default "data")
+  -w string
+    	language preference, so far only support CN, JP and EN (default "CN")
+```
+
 
 ![xally_v0.02](https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303051644083.gif)
 
