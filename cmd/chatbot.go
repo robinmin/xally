@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -364,12 +363,12 @@ func (bot *ChatBot) Ask(question string) bool {
 	)
 	elapsed := time.Since(start)
 	log.Info("Time cost for chatGPT API request : ", elapsed)
-	// log.Debug(resp)
-	json_resp, err1 := json.Marshal(resp)
-	if err1 != nil {
-		fmt.Printf("Error: %s", err1)
-	}
-	log.Debug(json_resp)
+	log.Debug(resp)
+	// json_resp, err1 := json.Marshal(resp)
+	// if err1 != nil {
+	// 	fmt.Printf("Error: %s", err1)
+	// }
+	// log.Debug(json_resp)
 
 	if err != nil {
 		bot.Say(err.Error(), true)
