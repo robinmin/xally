@@ -10,3 +10,6 @@ const LogConversationHistory = true
 
 // Default values of the path to store the chat history
 const ChatHistoryPath = "data"
+
+// Default values of language preference
+const LanguagePreference = "CN"
