@@ -29,7 +29,7 @@ then you will get the following tips:
 >   -p string
 >     	specify chat history path (default "data")
 
-
+![xally_v0.02](https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303051644083.gif)
 
 My trick is to specify the chat history path to a subfolder under my [Obsidian](https://obsidian.md/) data folder via the `-l` parameter. then I can use this brilliant tool to manage the conversation history. Going forward, It will be one of the next move to do more NLP-related in-depth development in this direction.
 
