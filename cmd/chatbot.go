@@ -20,12 +20,16 @@ import (
 
 const default_user_avatar = "👦"
 const default_ai_role = "expert"
+const default_language = "CN"
 
 type suggestionType int
 
 const (
 	// execute host command on locase machine
 	Ask suggestionType = iota
+
+	// translate text
+	Translate
 
 	// execute host command on locase machine
 	Cmd
@@ -43,6 +47,10 @@ const (
 var suggestionsMap = map[suggestionType][]prompt.Suggest{
 	Ask: {
 		{Text: "ask", Description: config.Text("tips_suggestion_ask")},
+	},
+	Translate: {
+		{Text: "translate", Description: config.Text("tips_suggestion_translate")},
+		{Text: "lookup", Description: config.Text("tips_suggestion_translate")},
 	},
 	Cmd: {
 		{Text: "cmd", Description: config.Text("tips_suggestion_cmd")},
@@ -111,7 +119,7 @@ func NewChatbot(chat_history_path string, name string, log_history bool) *ChatBo
 		token_counter:     0,
 		prompt:            nil,
 	}
-	bot.resetRole(default_ai_role)
+	bot.resetRole(default_ai_role, true)
 
 	log.Debug("bot.log_history = ", bot.log_history)
 	if bot.log_history {
@@ -162,7 +170,7 @@ func NewChatbot(chat_history_path string, name string, log_history bool) *ChatBo
 
 	// greetings once everything is ready
 	bot.dumpConversation("\n")
-	bot.Say(greeting_msg, true)
+	bot.Say(greeting_msg, false)
 
 	return bot
 }
@@ -238,12 +246,40 @@ func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (str
 		if len(arr_cmd) > 1 {
 			role = strings.ToLower(arr_cmd[1])
 		}
-		bot.resetRole(role)
+		bot.resetRole(role, false)
 	case "ask":
 		question := original_msg[len(arr_cmd[0]):]
 		if need_quit := bot.Ask(question); need_quit {
 			bot.Close()
 			os.Exit(0)
+		}
+	case "lookup":
+		text := original_msg[len(arr_cmd[0]):]
+		log.Debug("lookup for", text, "......")
+		msg, err := lookup(text, default_language)
+		if err != nil {
+			if len(msg) > 0 {
+				log.Error(msg)
+			} else {
+				log.Error(err.Error())
+			}
+		} else {
+			log.Debug("result : " + msg)
+			bot.Say(msg, false)
+		}
+	case "translate":
+		text := original_msg[len(arr_cmd[0]):]
+		log.Debug("translate for", text, "......")
+		msg, err := translate(text, default_language)
+		if err != nil {
+			if len(msg) > 0 {
+				log.Error(msg)
+			} else {
+				log.Error(err.Error())
+			}
+		} else {
+			log.Debug("result : " + msg)
+			bot.Say(msg, false)
 		}
 	case "cmd":
 		if len(arr_cmd) > 1 {
@@ -299,15 +335,19 @@ func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (str
 
 ////////////////////////////////////////////////////////////////
 
-func (bot *ChatBot) resetRole(role_name string) {
+func (bot *ChatBot) resetRole(role_name string, keep_silent bool) {
 	// find the role name
 	role, ok := predefined_roles[role_name]
 	if ok {
 		bot.role = role
-		bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), role_name, bot.role.avatar, bot.role.description), true)
+		if !keep_silent {
+			bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), role_name, bot.role.avatar, bot.role.description), true)
+		}
 	} else {
 		bot.role = predefined_roles[default_ai_role]
-		bot.Say(fmt.Sprintf(config.Text("error_invalid_role"), role_name), true)
+		if !keep_silent {
+			bot.Say(fmt.Sprintf(config.Text("error_invalid_role"), role_name), true)
+		}
 	}
 
 	// refresh role relevant variables
@@ -323,7 +363,7 @@ func (bot *ChatBot) resetRole(role_name string) {
 func (bot *ChatBot) Close() {
 	if bot.chat_history_file != nil {
 		// say goodbay before closing
-		bot.Say(config.Text("byebye_msg")+"\n", true)
+		bot.Say(config.Text("byebye_msg")+"\n", false)
 
 		bot.chat_history_file.Close()
 		bot.chat_history_file = nil
@@ -401,14 +441,12 @@ func (bot *ChatBot) updateHistory(role string, content string) {
 	})
 
 	// dump conversation history if necessary
-	converasation_mark := ""
 	if role == "user" {
-		converasation_mark = "#### " + default_user_avatar
+		bot.dumpConversation("#### " + content + "\n")
 	} else {
-		converasation_mark = bot.role.avatar
+		bot.dumpConversation(bot.role.avatar + "▶ \n")
+		bot.dumpConversation(content + "\n")
 	}
-	new_content := "\n" + converasation_mark + " : " + content
-	bot.dumpConversation(new_content)
 }
 
 func (bot *ChatBot) dumpConversation(content string) {
