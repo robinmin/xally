@@ -20,7 +20,6 @@ import (
 
 const default_user_avatar = "👦"
 const default_ai_role = "expert"
-const default_language = "CN"
 
 type suggestionType int
 
@@ -256,7 +255,7 @@ func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (str
 	case "lookup":
 		text := original_msg[len(arr_cmd[0]):]
 		log.Debug("lookup for", text, "......")
-		msg, err := lookup(text, default_language)
+		msg, err := lookup(text, config.CurrentLanguage)
 		if err != nil {
 			if len(msg) > 0 {
 				log.Error(msg)
@@ -270,7 +269,7 @@ func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (str
 	case "translate":
 		text := original_msg[len(arr_cmd[0]):]
 		log.Debug("translate for", text, "......")
-		msg, err := translate(text, default_language)
+		msg, err := translate(text, config.CurrentLanguage)
 		if err != nil {
 			if len(msg) > 0 {
 				log.Error(msg)
