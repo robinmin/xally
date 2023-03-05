@@ -74,7 +74,7 @@ var predefined_roles = map[string]SysRole{
 	"expert": {
 		role:        "system",
 		avatar:      "🐬",
-		description: "You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible. Knowledge cutoff: {knowledge_cutoff} Current date: {current_date}",
+		description: "You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.",
 		temperature: 0.2,
 	},
 	"assistant": {
