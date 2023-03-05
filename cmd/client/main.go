@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 
@@ -15,6 +16,7 @@ var (
 	help              bool
 	flag_log_history  bool
 	chat_history_path string
+	language          string
 )
 
 func init() {
@@ -22,6 +24,7 @@ func init() {
 	flag.BoolVar(&help, "h", false, "show the help message")
 	flag.BoolVar(&flag_log_history, "l", config.LogConversationHistory, "flag to log history")
 	flag.StringVar(&chat_history_path, "p", config.ChatHistoryPath, "specify chat history path")
+	flag.StringVar(&language, "w", "CN", "language preference, so far only support CN, JP and EN")
 
 	// change the default useage
 	flag.Usage = usage
@@ -29,7 +32,7 @@ func init() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `xally version: xally/%s
-Usage: xally [-hl] [-p history_path]
+Usage: xally [-hl] [-p history_path] [-w language_preference]
 
 Options:
 `, config.Version)
@@ -43,6 +46,7 @@ func main() {
 		flag.Usage()
 		return
 	}
+	config.SelectLang(strings.ToUpper(language))
 
 	// initialize log files
 	lg := cmd.NewLog("logs", config.AppName, log.DebugLevel)
