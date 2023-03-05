@@ -31,8 +31,8 @@ build: ## Build your project and put the output binary in build/bin/
 	GO111MODULE=on $(GOCMD) build -o build/bin/$(BINARY_NAME) ./cmd/client/main.go
 	chmod u+x build/bin/$(BINARY_NAME)
 
-	GO111MODULE=on $(GOCMD) build -o build/bin/$(BINARY_NAME)-server ./cmd/server/main.go
-	chmod u+x build/bin/$(BINARY_NAME)-server
+	# GO111MODULE=on $(GOCMD) build -o build/bin/$(BINARY_NAME)-server ./cmd/server/main.go
+	# chmod u+x build/bin/$(BINARY_NAME)-server
 
 dep: ## donwload dependencies packages
 	go mod download
