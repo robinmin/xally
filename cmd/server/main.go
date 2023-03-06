@@ -5,8 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"xhqb.com/tools/xally/cmd"
-	"xhqb.com/tools/xally/config"
+	"robinmin.net/tools/xally/cmd"
+	"robinmin.net/tools/xally/config"
 )
 
 /******************************************************************************

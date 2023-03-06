@@ -63,3 +63,4 @@ My trick is to specify the chat history path to a subfolder under my [Obsidian](
 - [Create a Custom CLI Tool and Distribute with HomeBrew Using Goreleaser and Github Actions](https://askcloudarchitech.com/posts/tutorials/create-homebrew-tap-golang-goreleaser-cobra-cli/)
 - [Making your project available through Homebrew](https://dev.to/superfola/making-your-project-available-through-homebrew-1ll5)
 - [Goreleaser Quick Start](https://goreleaser.com/quick-start/)
+- [5 tips for better unit testing in Golang](https://blog.devgenius.io/5-tips-for-better-unit-testing-in-golang-b25f9e79885a)

@@ -14,7 +14,7 @@ import (
 
 	"github.com/charmbracelet/glamour"
 	log "github.com/sirupsen/logrus"
-	"xhqb.com/tools/xally/config"
+	"robinmin.net/tools/xally/config"
 )
 
 type LogFile struct {

@@ -1,4 +1,4 @@
-module xhqb.com/tools/xally
+module robinmin.net/tools/xally
 
 go 1.20
 
