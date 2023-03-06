@@ -2,7 +2,7 @@ GOCMD=go
 GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
 BINARY_NAME=xally
-VERSION?=0.0.2
+VERSION?=0.0.4
 SERVICE_PORT?=3000
 EXPORT_RESULT?=false # for CI please set EXPORT_RESULT to true
 
@@ -35,10 +35,10 @@ build: ## Build your project and put the output binary in build/bin/
 	# GO111MODULE=on $(GOCMD) build -o build/bin/$(BINARY_NAME)-server ./cmd/server/main.go
 	# chmod u+x build/bin/$(BINARY_NAME)-server
 
-releases-check: ## check before release
+release-check: ## check before release
 	goreleaser --snapshot --skip-publish --clean
 
-releases: ## check before release
+release: ## check before release
 	goreleaser release --clean
 
 dep: ## donwload dependencies packages

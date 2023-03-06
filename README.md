@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.0.2)
+(v0.0.4)
 
 X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly. So far it has been integrated with the APIs of openai and deepl.
 
