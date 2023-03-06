@@ -8,8 +8,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/robinmin/xally/cmd"
-	"github.com/robinmin/xally/config"
+	"xhqb.com/tools/xally/cmd"
+	"xhqb.com/tools/xally/config"
 )
 
 var (
