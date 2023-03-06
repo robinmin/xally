@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/robinmin/xally/config"
 	log "github.com/sirupsen/logrus"
-	"xhqb.com/tools/xally/config"
 )
 
 type LogFile struct {

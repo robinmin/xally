@@ -15,7 +15,7 @@ import (
 	gpt3 "github.com/sashabaranov/go-gpt3"
 	log "github.com/sirupsen/logrus"
 
-	"xhqb.com/tools/xally/config"
+	"github.com/robinmin/xally/config"
 )
 
 const default_user_avatar = "👦"
