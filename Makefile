@@ -2,7 +2,7 @@ GOCMD=go
 GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
 BINARY_NAME=xally
-VERSION?=0.0.1
+VERSION?=0.0.2
 SERVICE_PORT?=3000
 EXPORT_RESULT?=false # for CI please set EXPORT_RESULT to true
 
@@ -24,6 +24,7 @@ init: ## Initialize project layout
 	mkdir -p configs    #### 配置文件模板或默认配置
 	mkdir -p build     	#### 打包和持续集成
 	mkdir -p logs     	#### 日志目录
+	goreleaser init
 
 ## Build:
 build: ## Build your project and put the output binary in build/bin/
@@ -33,6 +34,12 @@ build: ## Build your project and put the output binary in build/bin/
 
 	# GO111MODULE=on $(GOCMD) build -o build/bin/$(BINARY_NAME)-server ./cmd/server/main.go
 	# chmod u+x build/bin/$(BINARY_NAME)-server
+
+releases-check: ## check before release
+	goreleaser --snapshot --skip-publish --clean
+
+releases: ## check before release
+	goreleaser release --clean
 
 dep: ## donwload dependencies packages
 	go mod download
@@ -65,6 +72,7 @@ fmt: ## Format all code
 check: ## run precke
 	$(info ******************** checking before commit ********************)
 	pre-commit run
+	goreleaser --snapshot --skip-publish --rm-dist
 
 ## Lint:
 lint:  ## Run all available linters
