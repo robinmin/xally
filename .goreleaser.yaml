@@ -13,40 +13,36 @@ builds:
     env:
       - CGO_ENABLED=0
     goos:
-      - linux
       - darwin
+      - linux
       - windows
     goarch:
       - amd64
+      - arm64
+
   - id: server
     main: ./cmd/server/main.go
-    binary: xally-server
+    binary: xally_server
     env:
       - CGO_ENABLED=0
     goos:
-      - linux
       - darwin
+      - linux
       - windows
     goarch:
       - amd64
+      - arm64
+
+release:
+  prerelease: auto
+
+universal_binaries:
+  - replace: true
 
 archives:
-  - id: client
+  - id: xally-archive
     format: tar.gz
-    # this name template makes the OS and Arch compatible with the results of uname.
-    name_template: >-
-      {{ .ProjectName }}-server_
-      {{- title .Os }}_
-      {{- if eq .Arch "amd64" }}x86_64
-      {{- else if eq .Arch "386" }}i386
-      {{- else }}{{ .Arch }}{{ end }}
-      {{- if .Arm }}v{{ .Arm }}{{ end }}
-    # use zip for windows archives
-    format_overrides:
-    - goos: windows
-      format: zip
-  - id: server
-    format: tar.gz
+    rlcp: true
     # this name template makes the OS and Arch compatible with the results of uname.
     name_template: >-
       {{ .ProjectName }}_
@@ -59,6 +55,31 @@ archives:
     format_overrides:
     - goos: windows
       format: zip
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+
+  # - id: server
+  #   format: tar.gz
+  #   rlcp: true
+  #   # this name template makes the OS and Arch compatible with the results of uname.
+  #   name_template: >-
+  #     {{ .ProjectName }}_svr_
+  #     {{- title .Os }}_
+  #     {{- if eq .Arch "amd64" }}x86_64
+  #     {{- else if eq .Arch "386" }}i386
+  #     {{- else }}{{ .Arch }}{{ end }}
+  #     {{- if .Arm }}v{{ .Arm }}{{ end }}
+  #   # use zip for windows archives
+  #   format_overrides:
+  #   - goos: windows
+  #     format: zip
+  #   files:
+  #     - LICENSE*
+  #     - README*
+  #     - CHANGELOG*
+
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -71,16 +92,19 @@ changelog:
       - '^test:'
 
 brews:
-- tap:
+- ids:
+    - xally-archive
+  tap:
     owner: robinmin
     name: homebrew-tap
+  folder: Formula
   commit_author:
     name: robinmin
     email: minlongbing@gmail.com
   homepage: https://github.com/robinmin/xally
   description: >-
     X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly.
-  license: MIT
+  license: GPL-3.
 
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.
