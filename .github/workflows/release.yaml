@@ -31,5 +31,5 @@ jobs:
           args: release --rm-dist
         env:
           # Custom secret here since we need to access to robinmin/homebrew-tap and robinmin/scoop-bucket repo.
-          GITHUB_TOKEN: ${{ secrets.$PBLSH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PBLSH_TOKEN }}
 
