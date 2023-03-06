@@ -8,6 +8,8 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+xally_v0.02.gif
+pb/
 build/
 log/
 logs/
