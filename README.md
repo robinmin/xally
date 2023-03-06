@@ -2,11 +2,11 @@
 
 (v0.0.4)
 
-X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly. So far it has been integrated with the APIs of openai and deepl.
+X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly. So far it has been integrated with the APIs from [openai.com](https://openai.com/) and [deepl.com](https://www.deepl.com/).
 
 
 #### Installation
-You can directly download the latest version of X-Ally from [here](https://github.com/robinmin/xally/releases/tag/v0.0.4). If you also use macOS, you can install the latest version X-Ally via brew as shown below:
+You can directly download the latest version of X-Ally from [here](https://github.com/robinmin/xally/releases/). If you also use macOS, you can install the latest version X-Ally via brew as shown below:
 
 ```bash
 brew tap robinmin/homebrew-tap
