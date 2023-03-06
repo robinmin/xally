@@ -9,7 +9,7 @@ X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people d
 You can directly download the latest version of X-Ally from [here](https://github.com/robinmin/xally/releases/). If you also use macOS, you can install the latest version X-Ally via brew as shown below:
 
 ```bash
-brew tap robinmin/homebrew-tap
+brew tap robinmin/tap
 brew install xally
 ```
 
