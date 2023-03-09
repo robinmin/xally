@@ -14,17 +14,23 @@ import (
 
 var (
 	help              bool
-	flag_log_history  bool
+	config_file       string
 	chat_history_path string
 	language          string
+	command           string
+	role              string
+	verbose           bool
 )
 
 func init() {
 	// setup flags
 	flag.BoolVar(&help, "h", false, "show the help message")
-	flag.BoolVar(&flag_log_history, "l", config.LogConversationHistory, "flag to log history")
-	flag.StringVar(&chat_history_path, "p", config.ChatHistoryPath, "specify chat history path")
-	flag.StringVar(&language, "w", "CN", "language preference, so far only support CN, JP and EN")
+	flag.StringVar(&config_file, "f", "", "config file")
+	flag.StringVar(&chat_history_path, "d", "", "specify chat history path")
+	flag.StringVar(&language, "p", "", "language preference, so far only support CN, JP and EN")
+	flag.StringVar(&command, "c", "", "command for single line instruction")
+	flag.StringVar(&role, "r", "", "default role for command")
+	flag.BoolVar(&verbose, "v", false, "show detail information")
 
 	// change the default useage
 	flag.Usage = usage
@@ -32,7 +38,7 @@ func init() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `xally version: xally/%s
-Usage: xally [-hl] [-p history_path] [-w language_preference]
+Usage: xally [-hl] [-f config_file] [-c command] [-r role] [-d history_path] [-p language_preference]
 
 Options:
 `, config.Version)
@@ -46,20 +52,83 @@ func main() {
 		flag.Usage()
 		return
 	}
-	config.SelectLang(strings.ToUpper(language))
+
+	// load configuration
+	var err error
+	if _, err = config.LoadConfig(config_file, verbose); err != nil {
+		fmt.Println(err)
+	}
+
+	// update configuration by specified arguments
+	if len(role) > 0 {
+		config.MyConfig.System.DefaultRole = role
+	}
+
+	if len(chat_history_path) > 0 {
+		config.MyConfig.System.ChatHistoryPath = chat_history_path
+	}
+
+	if len(language) > 0 {
+		config.MyConfig.System.PeferenceLanguage = strings.ToUpper(language)
+	}
+
+	// output before the log mechanism works
+	if verbose {
+		fmt.Println("Log folder: ", config.MyConfig.System.LogPath)
+		fmt.Println("Chat history folder: ", config.MyConfig.System.ChatHistoryPath)
+	}
 
 	// initialize log files
-	lg := cmd.NewLog("logs", config.AppName, log.DebugLevel)
-	defer lg.Close()
+	logger := cmd.NewLog(config.MyConfig.System.LogPath, config.AppName, config.MyConfig.System.LogLevel)
+	defer logger.Close()
 	log.Debug("System initializing......")
 
-	pwd, _ := os.Getwd()
-	log.Debug("GetCurrPath = ", cmd.GetCurrPath())
-	log.Debug("PWD = ", pwd)
-
-	bot := cmd.NewChatbot(config.ChatHistoryPath, config.AppName, config.LogConversationHistory)
+	bot := cmd.NewChatbot(
+		config.MyConfig.System.ChatHistoryPath,
+		config.AppName,
+		role,
+		len(config.MyConfig.System.ChatHistoryPath) > 0,
+	)
 	defer bot.Close()
 
-	bot.Run()
+	if len(command) == 0 {
+		bot.Run()
+	} else {
+		commandFields := strings.Fields(command)
+		result, err := bot.CommandProcessor(command, commandFields)
+		if err != nil {
+			log.Error(err.Error())
+		}
+		log.Debug(result)
+	}
+
 	log.Debug("Quit System......")
 }
+
+// func test_http_2_markdown() {
+// 	url := "https://stackoverflow.com/questions/38673673/access-http-response-as-string-in-go"
+// 	// headers := map[string]string{
+// 	// 	"Content-Type": "application/json",
+// 	// }
+// 	// payload := `{"key": "value"}`
+// 	headers := map[string]string{}
+// 	payload := ""
+
+// 	statusCode, responseBody, err := cmd.FetchURL("GET", url, payload, headers)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 		return
+// 	}
+// 	fmt.Println("url : ", url)
+// 	fmt.Println("code / length : ", statusCode, " / ", len(responseBody))
+// 	// fmt.Println("body : ", responseBody)
+
+// 	converter := md.NewConverter("", true, nil)
+// 	markdown, err := converter.ConvertString(responseBody)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+
+// 	out, _ := glamour.Render(markdown, "dark")
+// 	fmt.Print(out)
+// }
