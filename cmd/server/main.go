@@ -16,7 +16,7 @@ import (
 *******************************************************************************/
 func main() {
 	// initialize log files
-	lg := cmd.NewLog("logs", config.AppName, log.DebugLevel)
+	lg := cmd.NewLog("logs", config.AppName, "debug")
 	defer lg.Close()
 	log.Debug("System initializing......")
 
