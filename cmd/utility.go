@@ -1,8 +1,11 @@
 package cmd
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -14,13 +17,17 @@ import (
 
 	"github.com/charmbracelet/glamour"
 	log "github.com/sirupsen/logrus"
+
 	"robinmin.net/tools/xally/config"
 )
+
+// Global koanf instance. Use "." as the key path delimiter. This can be "/" or any character.
+// var k = koanf.New(".")
 
 type LogFile struct {
 	file_handle *os.File
 	log_path    string
-	level       log.Level
+	level       string
 }
 
 func get_yyyymmdd() string {
@@ -28,34 +35,43 @@ func get_yyyymmdd() string {
 	return fmt.Sprintf("%04d%02d%02d", t.Year(), t.Month(), t.Day())
 }
 
-func NewLog(log_path string, name string, level log.Level) *LogFile {
-	lf := &LogFile{
+func get_yyyymm() string {
+	t := time.Now()
+	return fmt.Sprintf("%04d%02d", t.Year(), t.Month())
+}
+
+func NewLog(log_path string, name string, level string) *LogFile {
+	logger := &LogFile{
 		log_path: log_path,
 		level:    level,
 	}
-	if _, err := os.Stat(lf.log_path); os.IsNotExist(err) {
-		errDir := os.MkdirAll(lf.log_path, 0755)
+	if _, err := os.Stat(logger.log_path); os.IsNotExist(err) {
+		errDir := os.MkdirAll(logger.log_path, 0755)
 		if errDir != nil {
 			log.Error(err)
-			return lf
+			return logger
 		}
 	}
 
 	var err error
-	log_file := lf.log_path + "/" + name + "_" + get_yyyymmdd() + ".log"
-	if lf.file_handle == nil {
-		lf.file_handle, err = os.OpenFile(log_file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	log_file := logger.log_path + "/" + name + "_" + get_yyyymmdd() + ".log"
+	if logger.file_handle == nil {
+		logger.file_handle, err = os.OpenFile(log_file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Error(err)
-			return lf
+			return logger
 		}
 
-		log.SetOutput(lf.file_handle)
+		log.SetOutput(logger.file_handle)
 		// log.SetFormatter(&log.JSONFormatter{})
-		log.SetLevel(lf.level)
-
+		var level_int log.Level
+		if level_int, err = log.ParseLevel(level); err == nil {
+			log.SetLevel(level_int)
+		} else {
+			log.SetLevel(log.DebugLevel)
+		}
 	}
-	return lf
+	return logger
 }
 
 func (lf *LogFile) Close() {
@@ -85,19 +101,22 @@ func translate(text string, lang string) (string, error) {
 	msg := ""
 
 	// 设置DeepL API的URL和API密钥
-	apiKey := os.Getenv("DEEPL_API_KEY")
-	if apiKey == "" {
-		msg = config.Text("error_no_deepl_key")
-		return msg, nil
+	api_key := config.MyConfig.System.APIKeyDeepl
+	if api_key == "" {
+		api_key = os.Getenv("DEEPL_API_KEY")
+		if api_key == "" {
+			msg = config.Text("error_no_deepl_key")
+			return msg, nil
+		}
 	}
-	apiUrl := "https://api-free.deepl.com/v2/translate"
+	api_url := config.MyConfig.System.APIEndpointDeepl + "/translate"
 
 	// 构建HTTP请求
 	values := url.Values{}
-	values.Set("auth_key", apiKey)
+	values.Set("auth_key", api_key)
 	values.Set("text", text)
 	values.Set("target_lang", lang)
-	req, err := http.NewRequest("POST", apiUrl,
+	req, err := http.NewRequest("POST", api_url,
 		ioutil.NopCloser(strings.NewReader(values.Encode())))
 	if err != nil {
 		msg = "Failed to create HTTP request object: " + err.Error()
@@ -140,19 +159,22 @@ func lookup(text string, lang string) (string, error) {
 	msg := ""
 
 	// 设置DeepL API的URL和API密钥
-	apiKey := os.Getenv("DEEPL_API_KEY")
-	if apiKey == "" {
-		msg = config.Text("error_no_deepl_key")
-		return msg, nil
+	api_key := config.MyConfig.System.APIKeyDeepl
+	if api_key == "" {
+		api_key = os.Getenv("DEEPL_API_KEY")
+		if api_key == "" {
+			msg = config.Text("error_no_deepl_key")
+			return msg, nil
+		}
 	}
-	apiUrl := "https://api-free.deepl.com/v2/lexicon"
+	api_url := config.MyConfig.System.APIEndpointDeepl + "/lexicon"
 
 	// 构建HTTP请求
 	values := url.Values{}
-	values.Set("auth_key", apiKey)
+	values.Set("auth_key", api_key)
 	values.Set("text", text)
 	values.Set("target_lang", lang)
-	req, err := http.NewRequest("POST", apiUrl,
+	req, err := http.NewRequest("POST", api_url,
 		ioutil.NopCloser(strings.NewReader(values.Encode())))
 	if err != nil {
 		msg = "Failed to create HTTP request object: " + err.Error()
@@ -198,4 +220,56 @@ func lookup(text string, lang string) (string, error) {
 	}
 
 	return sb.String(), nil
+}
+
+func FetchURL(verb string, url string, payload string, headers map[string]string) (int, string, error) {
+	resp_code := http.StatusOK
+	msg := ""
+	resp_body := ""
+
+	// 创建HTTP客户端
+	client := &http.Client{}
+
+	// 创建HTTP请求
+	req, err := http.NewRequest(verb, url, bytes.NewBuffer([]byte(payload)))
+	if err != nil {
+		msg = fmt.Sprintf("failed to create HTTP request: %v", err.Error())
+		log.Error(msg)
+		return resp_code, resp_body, err
+	}
+
+	// 设置HTTP请求头
+	if headers != nil && len(headers) > 0 {
+		for key, value := range headers {
+			req.Header.Set(key, value)
+		}
+	}
+
+	// 发送HTTP请求
+	resp, err := client.Do(req)
+	if err != nil {
+		msg = fmt.Sprintf("failed to send HTTP request: %v", err.Error())
+		log.Error(msg)
+		return resp_code, resp_body, err
+	}
+	defer resp.Body.Close()
+
+	resp_code = resp.StatusCode
+	if resp.StatusCode == http.StatusOK {
+		// 读取响应体
+		bodyBytes, err1 := io.ReadAll(resp.Body)
+		if err1 == nil {
+			resp_body = string(bodyBytes)
+		} else {
+			msg = fmt.Sprintf("failed to read response body: %v", err.Error())
+			log.Error(msg)
+		}
+	} else {
+		msg = fmt.Sprintf("Invalid response code : : %v", resp.StatusCode)
+		log.Error(msg)
+		err = errors.New(msg)
+	}
+
+	// 返回响应状态码、响应体和错误信息
+	return resp_code, resp_body, nil
 }
