@@ -7,7 +7,8 @@
         "mode": "debug",
         "program": "${workspaceFolder}/cmd/client",
         "envFile": "${workspaceFolder}/.env",
-        "args": [""],
-        "showLog": true
+        "args": ["-v"],
+        "showLog": true,
+        "console": "integratedTerminal"
     }]
 }

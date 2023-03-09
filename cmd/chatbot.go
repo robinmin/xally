@@ -19,7 +19,6 @@ import (
 )
 
 const default_user_avatar = "👦"
-const default_ai_role = "expert"
 
 type suggestionType int
 
@@ -43,58 +42,46 @@ const (
 	Others
 )
 
-var suggestionsMap = map[suggestionType][]prompt.Suggest{
-	Ask: {
-		{Text: "ask", Description: config.Text("tips_suggestion_ask")},
-	},
-	Translate: {
-		{Text: "translate", Description: config.Text("tips_suggestion_translate")},
-		{Text: "lookup", Description: config.Text("tips_suggestion_translate")},
-	},
-	Cmd: {
-		{Text: "cmd", Description: config.Text("tips_suggestion_cmd")},
-	},
-	Reset: {
-		{Text: "reset expert", Description: config.Text("tips_suggestion_reset") + "expert"},
-		{Text: "reset assistant", Description: config.Text("tips_suggestion_reset") + "assistant"},
-	},
-	Quit: {
-		{Text: "q、88", Description: config.Text("tips_suggestion_quit")},
-		// {Text: "88", Description: config.Text("tips_suggestion_quit")},
-		// {Text: "886", Description: config.Text("tips_suggestion_quit")},
-		// {Text: "bye", Description: config.Text("tips_suggestion_quit")},
-		// {Text: "quit", Description: config.Text("tips_suggestion_quit")},
-		{Text: "exit、quit", Description: config.Text("tips_suggestion_quit")},
-	},
-	Others: {},
-}
+const prompt_tip_flag = " ▶ "
 
-type SysRole struct {
-	role        string
-	avatar      string
-	description string
-	temperature float32
-}
+func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
+	reset_rolese := []prompt.Suggest{}
+	for _, tmp_role := range config.MyConfig.Roles {
+		reset_rolese = append(reset_rolese, prompt.Suggest{
+			Text:        "reset " + tmp_role.Name,
+			Description: config.Text("tips_suggestion_reset") + tmp_role.Name + tmp_role.Avatar,
+		})
+	}
 
-var predefined_roles = map[string]SysRole{
-	"expert": {
-		role:        "system",
-		avatar:      "🐬",
-		description: "You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.",
-		temperature: 0.2,
-	},
-	"assistant": {
-		role:        "system",
-		avatar:      "🧰",
-		description: "You are a ChatGPT-based daily chit-chat bot with answers that are as concise and soft as possible.",
-		temperature: 1.8,
-	},
+	suggestionsMap := &map[suggestionType][]prompt.Suggest{
+		Ask: {
+			{Text: "ask", Description: config.Text("tips_suggestion_ask")},
+		},
+		Translate: {
+			{Text: "translate", Description: config.Text("tips_suggestion_translate")},
+			{Text: "lookup", Description: config.Text("tips_suggestion_translate")},
+		},
+		Cmd: {
+			{Text: "cmd", Description: config.Text("tips_suggestion_cmd")},
+		},
+		Reset: reset_rolese,
+		Quit: {
+			{Text: "q、88", Description: config.Text("tips_suggestion_quit")},
+			// {Text: "88", Description: config.Text("tips_suggestion_quit")},
+			// {Text: "886", Description: config.Text("tips_suggestion_quit")},
+			// {Text: "bye", Description: config.Text("tips_suggestion_quit")},
+			// {Text: "quit", Description: config.Text("tips_suggestion_quit")},
+			{Text: "exit、quit", Description: config.Text("tips_suggestion_quit")},
+		},
+		Others: {},
+	}
+	return suggestionsMap
 }
 
 type ChatBot struct {
 	// chatbot name
 	name string
-	role SysRole
+	role *config.SysRole
 
 	// logfile for chat conversation
 	chat_history_file *os.File
@@ -107,7 +94,7 @@ type ChatBot struct {
 	prompt        *prompt.Prompt
 }
 
-func NewChatbot(chat_history_path string, name string, log_history bool) *ChatBot {
+func NewChatbot(chat_history_path string, name string, role_name string, log_history bool) *ChatBot {
 	bot := &ChatBot{
 		name:              name,
 		chat_history_file: nil,
@@ -118,48 +105,37 @@ func NewChatbot(chat_history_path string, name string, log_history bool) *ChatBo
 		token_counter:     0,
 		prompt:            nil,
 	}
-	bot.resetRole(default_ai_role, true)
+	if role_name == "" {
+		bot.resetRole(config.MyConfig.System.DefaultRole, true)
+	} else {
+		bot.resetRole(role_name, true)
+	}
 
-	log.Debug("bot.log_history = ", bot.log_history)
-	if bot.log_history {
-		// create folder if necessary
-		log.Debug("create folder if necessary : ", chat_history_path)
-		if _, err := os.Stat(chat_history_path); os.IsNotExist(err) {
-			errDir := os.MkdirAll(chat_history_path, 0755)
-			if errDir != nil {
-				log.Error(err)
-				return bot
-			}
-		}
-
-		chat_history_fname := filepath.Join(chat_history_path, bot.name+"_"+get_yyyymmdd()+".md")
-		var err error
-		log.Debug("Chat History will be stored at ", chat_history_fname)
-		bot.chat_history_file, err = os.OpenFile(
-			chat_history_fname,
-			os.O_APPEND|os.O_CREATE|os.O_WRONLY,
-			0644,
-		)
-		if err != nil {
-			log.Println(err)
+	api_key := config.MyConfig.System.APIKeyOpenai
+	if api_key == "" {
+		api_key = os.Getenv("OPENAI_API_KEY")
+		if api_key == "" {
+			bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
+			return bot
 		}
 	}
 
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	if apiKey == "" {
-		bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
-		return bot
+	// build the client object with existing API keys and API endpoints
+	api_cfg := gpt3.DefaultConfig(api_key)
+	api_endpoint := config.MyConfig.System.APIEndpointOpenai
+	if len(api_endpoint) > 0 {
+		api_cfg.BaseURL = api_endpoint
 	}
-
-	// scanner := bufio.NewScanner(os.Stdin)
-	bot.client = gpt3.NewClient(apiKey)
+	log.Println("api_cfg.BaseURL  = ", api_cfg.BaseURL)
+	bot.client = gpt3.NewClientWithConfig(api_cfg)
+	// bot.client.
 
 	greeting_msg := fmt.Sprintf(config.Text("greeting_msg"), bot.name, config.Version, bot.name, strftime.Format(time.Now(), "%Y-%m-%d %H:%M:%S"))
 	bot.prompt = prompt.New(
 		bot.getExecutor(""),
 		bot.completer,
 		// prompt.OptionTitle(""),
-		prompt.OptionPrefix(default_user_avatar+" ▶ "),
+		prompt.OptionPrefix(default_user_avatar+prompt_tip_flag),
 		// prompt.OptionHistory([]string{"SELECT * FROM users;"}),
 		prompt.OptionPrefixTextColor(prompt.Yellow),
 		prompt.OptionPreviewSuggestionTextColor(prompt.Blue),
@@ -168,7 +144,7 @@ func NewChatbot(chat_history_path string, name string, log_history bool) *ChatBo
 	)
 
 	// greetings once everything is ready
-	bot.dumpConversation("\n")
+	bot.dumpChatHistory("\n")
 	bot.Say(greeting_msg, false)
 
 	return bot
@@ -180,26 +156,19 @@ func (bot *ChatBot) Run() {
 	}
 }
 
-func (bot *ChatBot) completer(d prompt.Document) []prompt.Suggest {
+func (bot *ChatBot) completer(doc prompt.Document) []prompt.Suggest {
 	suggestions := []prompt.Suggest{}
-	word := strings.ToLower(d.TextBeforeCursor())
+	word := strings.ToLower(doc.TextBeforeCursor())
 
+	suggestionsMap := get_suggestion_map(bot.role.Name)
 	switch word {
 	case "":
 		return suggestions
-	// case "reset":
-	// 	for role_name := range predefined_roles {
-	// 		suggestions = append(suggestions, prompt.Suggest{
-	// 			Text:        "reset " + role_name,
-	// 			Description: config.Text("tips_suggestion_reset") + role_name,
-	// 		})
-	// 	}
-	// 	return suggestions
 	default:
-		for _, s := range suggestionsMap {
+		for _, s := range *suggestionsMap {
 			suggestions = append(suggestions, s...)
 		}
-		return prompt.FilterHasPrefix(suggestions, d.TextBeforeCursor(), true)
+		return prompt.FilterHasPrefix(suggestions, doc.TextBeforeCursor(), true)
 	}
 }
 
@@ -219,7 +188,7 @@ func (bot *ChatBot) getExecutor(dir string) func(string) {
 			os.Exit(0)
 		default:
 			commandFields := strings.Fields(cmds)
-			result, err := bot.commandProcessor(cmds, commandFields)
+			result, err := bot.CommandProcessor(cmds, commandFields)
 			if err != nil {
 				log.Error(err.Error())
 			}
@@ -228,7 +197,7 @@ func (bot *ChatBot) getExecutor(dir string) func(string) {
 	}
 }
 
-func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (string, error) {
+func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (string, error) {
 	msg := ""
 	if arr_cmd == nil || len(arr_cmd) == 0 {
 		msg = "Invalid parameters for commandProcessor"
@@ -241,9 +210,11 @@ func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (str
 	case "reset":
 		log.Print(arr_cmd)
 
-		role := default_ai_role
+		var role string
 		if len(arr_cmd) > 1 {
 			role = strings.ToLower(arr_cmd[1])
+		} else {
+			role = config.MyConfig.System.DefaultRole
 		}
 		bot.resetRole(role, false)
 	case "ask":
@@ -255,7 +226,7 @@ func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (str
 	case "lookup":
 		text := original_msg[len(arr_cmd[0]):]
 		log.Debug("lookup for", text, "......")
-		msg, err := lookup(text, config.CurrentLanguage)
+		msg, err := lookup(text, config.MyConfig.System.PeferenceLanguage)
 		if err != nil {
 			if len(msg) > 0 {
 				log.Error(msg)
@@ -269,7 +240,7 @@ func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (str
 	case "translate":
 		text := original_msg[len(arr_cmd[0]):]
 		log.Debug("translate for", text, "......")
-		msg, err := translate(text, config.CurrentLanguage)
+		msg, err := translate(text, config.MyConfig.System.PeferenceLanguage)
 		if err != nil {
 			if len(msg) > 0 {
 				log.Error(msg)
@@ -335,28 +306,42 @@ func (bot *ChatBot) commandProcessor(original_msg string, arr_cmd []string) (str
 ////////////////////////////////////////////////////////////////
 
 func (bot *ChatBot) resetRole(role_name string, keep_silent bool) {
-	// find the role name
-	role, ok := predefined_roles[role_name]
-	if ok {
-		bot.role = role
-		if !keep_silent {
-			bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), role_name, bot.role.avatar, bot.role.description), true)
+	if role, err := config.MyConfig.FindRole(role_name); err != nil {
+		bot.Say(fmt.Sprintf(config.Text("error_invalid_role"), role_name), true)
+		if role, err := config.MyConfig.FindRole(config.MyConfig.System.DefaultRole); err != nil {
+			if !keep_silent {
+				bot.Say(fmt.Sprintf(config.Text("error_invalid_role"), role_name), true)
+			}
+		} else {
+			bot.role = role
+			if !keep_silent {
+				bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), config.MyConfig.System.DefaultRole, bot.role.Avatar, bot.role.Prompt), true)
+			}
 		}
 	} else {
-		bot.role = predefined_roles[default_ai_role]
+		bot.role = role
 		if !keep_silent {
-			bot.Say(fmt.Sprintf(config.Text("error_invalid_role"), role_name), true)
+			bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), role_name, bot.role.Avatar, bot.role.Prompt), true)
 		}
 	}
 
 	// refresh role relevant variables
 	bot.msg_history = []gpt3.ChatCompletionMessage{
 		{
-			Role:    bot.role.role,
-			Content: bot.role.description,
+			Role:    "system",
+			Content: bot.role.Prompt,
 		},
 	}
+	if len(bot.role.Opening) > 0 {
+		bot.msg_history = append(bot.msg_history, gpt3.ChatCompletionMessage{
+			Role:    "user",
+			Content: bot.role.Opening,
+		})
+	}
 	bot.token_counter = 0
+
+	// reopen history
+	bot.initChatHistory(bot.chat_history_path, role_name)
 }
 
 func (bot *ChatBot) Close() {
@@ -372,7 +357,7 @@ func (bot *ChatBot) Close() {
 func (bot *ChatBot) Say(msg string, need_dump bool) {
 	echo_info(msg)
 	if need_dump {
-		bot.dumpConversation(msg)
+		bot.dumpChatHistory(msg)
 	}
 }
 
@@ -396,18 +381,13 @@ func (bot *ChatBot) Ask(question string) bool {
 			Messages: bot.msg_history,
 			// MaxTokens: 4000 - bot.token_counter,
 			MaxTokens:   3000,
-			Temperature: bot.role.temperature,
+			Temperature: bot.role.Temperature,
 			N:           1,
 		},
 	)
 	elapsed := time.Since(start)
 	log.Info("Time cost for chatGPT API request : ", elapsed)
 	log.Debug(resp)
-	// json_resp, err1 := json.Marshal(resp)
-	// if err1 != nil {
-	// 	fmt.Printf("Error: %s", err1)
-	// }
-	// log.Debug(json_resp)
 
 	if err != nil {
 		bot.Say(err.Error(), true)
@@ -417,7 +397,7 @@ func (bot *ChatBot) Ask(question string) bool {
 		bot.token_counter = resp.Usage.TotalTokens
 		message := resp.Choices[0].Message.Content
 
-		fmt.Println(bot.role.avatar + " ▶ ")
+		fmt.Println(bot.role.Avatar + prompt_tip_flag)
 		bot.Say(message, false)
 
 		gray := color.New(color.FgHiBlack).PrintfFunc()
@@ -441,14 +421,14 @@ func (bot *ChatBot) updateHistory(role string, content string) {
 
 	// dump conversation history if necessary
 	if role == "user" {
-		bot.dumpConversation("#### " + content + "\n")
+		bot.dumpChatHistory("#### " + content + "\n")
 	} else {
-		bot.dumpConversation(bot.role.avatar + "▶ \n")
-		bot.dumpConversation(content + "\n")
+		bot.dumpChatHistory(bot.role.Avatar + prompt_tip_flag + "\n")
+		bot.dumpChatHistory(content + "\n")
 	}
 }
 
-func (bot *ChatBot) dumpConversation(content string) {
+func (bot *ChatBot) dumpChatHistory(content string) {
 	if bot.log_history && bot.chat_history_file != nil {
 		size, err := bot.chat_history_file.WriteString(content)
 		if err != nil {
@@ -463,4 +443,33 @@ func (bot *ChatBot) dumpConversation(content string) {
 			}
 		}
 	}
+}
+
+func (bot *ChatBot) initChatHistory(chat_history_path string, prefix string) bool {
+	if bot.log_history {
+		// create folder if necessary
+		log.Debug("create folder if necessary : ", chat_history_path)
+		if _, err := os.Stat(chat_history_path); os.IsNotExist(err) {
+			errDir := os.MkdirAll(chat_history_path, 0755)
+			if errDir != nil {
+				log.Error(err)
+				return false
+			}
+		}
+
+		// close old one
+		bot.chat_history_file.Close()
+		bot.chat_history_file = nil
+
+		// open new one
+		chat_history_fname := filepath.Join(chat_history_path, prefix+"_"+get_yyyymm()+".md")
+		var err error
+		log.Debug("Chat History will be stored at ", chat_history_fname)
+		bot.chat_history_file, err = os.OpenFile(chat_history_fname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Println(err)
+			return false
+		}
+	}
+	return true
 }

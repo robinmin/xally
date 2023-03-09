@@ -1,16 +1,20 @@
 # X-Ally
 
-(v0.0.4)
+(v0.0.5)
 
 X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly. So far it has been integrated with the APIs from [openai.com](https://openai.com/) and [deepl.com](https://www.deepl.com/).
 
 
 #### Installation
-You can directly download the latest version of X-Ally from [here](https://github.com/robinmin/xally/releases/). If you also use macOS, you can install the latest version X-Ally via brew as shown below:
+You can directly download the latest version of X-Ally from [here](https://github.com/robinmin/xally/releases/): Or install it as:
 
 ```bash
+# via brew
 brew tap robinmin/tap
 brew install xally
+
+# via source code
+go get -u github.com/robinmin/xally
 ```
 
 #### Usage
@@ -64,3 +68,5 @@ My trick is to specify the chat history path to a subfolder under my [Obsidian](
 - [Making your project available through Homebrew](https://dev.to/superfola/making-your-project-available-through-homebrew-1ll5)
 - [Goreleaser Quick Start](https://goreleaser.com/quick-start/)
 - [5 tips for better unit testing in Golang](https://blog.devgenius.io/5-tips-for-better-unit-testing-in-golang-b25f9e79885a)
+- [The Go libraries that never failed us: 22 libraries you need to know](https://threedots.tech/post/list-of-recommended-libraries/#useful-tools)
+- [html-to-markdown](https://github.com/JohannesKaufmann/html-to-markdown)
