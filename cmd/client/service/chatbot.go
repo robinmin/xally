@@ -1,10 +1,12 @@
-package chatbot
+package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -12,25 +14,34 @@ import (
 	"github.com/c-bata/go-prompt"
 	"github.com/fatih/color"
 	strftime "github.com/itchyny/timefmt-go"
-	gpt3 "github.com/sashabaranov/go-gpt3"
+	gpt3 "github.com/sashabaranov/go-openai"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slices"
 
-	"robinmin.net/tools/xally/config"
-	"robinmin.net/tools/xally/shared/utility"
+	"github.com/robinmin/xally/config"
+	"github.com/robinmin/xally/shared/clientdb"
+	"github.com/robinmin/xally/shared/utility"
 )
 
-const default_user_avatar = "👦"
+const default_user_avatar = "🧑"
+const prompt_tip_flag = " ▶ "
 
 type suggestionType int
 
 const (
-	// execute host command on locase machine
+	// execute host command on local machine
 	Ask suggestionType = iota
 
 	// translate text
 	Translate
 
-	// execute host command on locase machine
+	// data from web page contents
+	Web
+
+	// data from file contents
+	File
+
+	// execute host command on local machine
 	Cmd
 
 	// Reset suggestion
@@ -43,9 +54,8 @@ const (
 	Others
 )
 
-const prompt_tip_flag = " ▶ "
-
 func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
+	// culmulate role list
 	reset_rolese := []prompt.Suggest{}
 	for _, tmp_role := range config.MyConfig.Roles {
 		reset_rolese = append(reset_rolese, prompt.Suggest{
@@ -61,6 +71,13 @@ func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
 		Translate: {
 			{Text: "translate", Description: config.Text("tips_suggestion_translate")},
 			{Text: "lookup", Description: config.Text("tips_suggestion_translate")},
+		},
+		Web: {
+			{Text: PLUGIN_NAME_WEB_CONTENT, Description: config.Text("tips_suggestion_web_content")},
+			{Text: PLUGIN_NAME_WEB_SUMMARY, Description: config.Text("tips_suggestion_web_summary")},
+		},
+		File: {
+			{Text: PLUGIN_NAME_FILE, Description: config.Text("tips_suggestion_file")},
 		},
 		Cmd: {
 			{Text: "cmd", Description: config.Text("tips_suggestion_cmd")},
@@ -79,6 +96,38 @@ func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
 	return suggestionsMap
 }
 
+type LivePrefixState struct {
+	LivePrefix string
+	IsEnable   bool
+	Buffer     string
+}
+
+func (lps *LivePrefixState) ChangeLivePrefix() (string, bool) {
+	return default_user_avatar + prompt_tip_flag, lps.IsEnable
+}
+
+func (lps *LivePrefixState) InputModePadding(cmds string) bool {
+	// add keyboard padding to support multiple line input
+	if strings.HasSuffix(cmds, ";") || strings.HasSuffix(cmds, "；") {
+		lps.Buffer = lps.Buffer + cmds
+		lps.IsEnable = false
+		// lps.LivePrefix = cmds
+		// fmt.Printf("Query: %s\n", query)
+		lps.Buffer = ""
+		return lps.IsEnable
+	}
+	lps.Buffer = lps.Buffer + cmds + " "
+	// lps.LivePrefix = "..."
+	lps.IsEnable = true
+
+	return lps.IsEnable
+}
+
+func (lps *LivePrefixState) ResetInputMode() {
+	lps.Buffer = ""
+	lps.IsEnable = true
+}
+
 type ChatBot struct {
 	// chatbot name
 	name string
@@ -88,29 +137,43 @@ type ChatBot struct {
 	chat_history_file *os.File
 	chat_history_path string
 
-	client        *gpt3.Client
-	msg_history   []gpt3.ChatCompletionMessage
-	log_history   bool
-	token_counter int
-	prompt        *prompt.Prompt
+	client                   *gpt3.Client
+	msg_history              []gpt3.ChatCompletionMessage
+	log_history              bool
+	token_counter_total      int
+	token_counter_completion int
+	token_counter_prompt     int
+	prompt                   *prompt.Prompt
+	clientdb                 *clientdb.ClientDB
+
+	plugin_mgr *PluginManager
+	kb_padding *LivePrefixState
 }
 
-func NewChatbot(chat_history_path string, name string, role_name string, log_history bool) *ChatBot {
+func NewChatbot(chat_history_path string, name string, role_name string, log_history bool, verbose bool) *ChatBot {
 	bot := &ChatBot{
-		name:              name,
-		chat_history_file: nil,
-		chat_history_path: chat_history_path,
-		client:            nil,
-		msg_history:       nil,
-		log_history:       log_history,
-		token_counter:     0,
-		prompt:            nil,
+		name:                     name,
+		chat_history_file:        nil,
+		chat_history_path:        chat_history_path,
+		client:                   nil,
+		msg_history:              nil,
+		log_history:              log_history,
+		token_counter_total:      0,
+		token_counter_completion: 0,
+		token_counter_prompt:     0,
+		prompt:                   nil,
 	}
 	if role_name == "" {
 		bot.resetRole(config.MyConfig.System.DefaultRole, true)
 	} else {
 		bot.resetRole(role_name, true)
 	}
+
+	// initialize all plugins and plugin manager
+	bot.plugin_mgr = NewPluginManager()
+	bot.plugin_mgr.Open()
+
+	bot.clientdb, _ = clientdb.InitClientDB(path.Join(config.MyConfig.System.ChatHistoryPath, "xally.db"), verbose)
 
 	api_key := config.MyConfig.System.APIKeyOpenai
 	if api_key == "" {
@@ -132,13 +195,27 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 	// bot.client.
 
 	greeting_msg := fmt.Sprintf(config.Text("greeting_msg"), bot.name, config.Version, bot.name, strftime.Format(time.Now(), "%Y-%m-%d %H:%M:%S"))
+	var option_history []string
+	var err error
+	if bot.clientdb != nil {
+		if option_history, err = bot.clientdb.LoadOptionHistory(bot.role.Name); err != nil {
+			log.Error("Failed to load option history: ", err)
+		}
+	}
+
+	// add keyboard padding to support multiple lines when inputting
+	bot.kb_padding = &LivePrefixState{}
+	bot.kb_padding.ResetInputMode()
+
 	bot.prompt = prompt.New(
 		bot.getExecutor(""),
 		bot.completer,
-		// prompt.OptionTitle(""),
-		prompt.OptionPrefix(default_user_avatar+prompt_tip_flag),
-		// prompt.OptionHistory([]string{"SELECT * FROM users;"}),
+		prompt.OptionTitle(bot.name+" / "+config.Version),
+		// prompt.OptionPrefix(default_user_avatar+prompt_tip_flag),
+		prompt.OptionPrefix("... "),
 		prompt.OptionPrefixTextColor(prompt.Yellow),
+		prompt.OptionLivePrefix(bot.kb_padding.ChangeLivePrefix),
+		prompt.OptionHistory(option_history),
 		prompt.OptionPreviewSuggestionTextColor(prompt.Blue),
 		prompt.OptionSelectedSuggestionBGColor(prompt.LightGray),
 		prompt.OptionSuggestionBGColor(prompt.DarkGray),
@@ -176,8 +253,14 @@ func (bot *ChatBot) completer(doc prompt.Document) []prompt.Suggest {
 func (bot *ChatBot) getExecutor(dir string) func(string) {
 	return func(cmds string) {
 		log.Debug("Executor running on :" + cmds)
-		if len(cmds) == 0 {
+		if cmds == "" {
 			log.Debug("Blank command!")
+			return
+		}
+
+		// add keyboard padding to support multiple line input
+		if !bot.kb_padding.InputModePadding(cmds) {
+			log.Debug("Enter into multiple line mo")
 			return
 		}
 
@@ -189,27 +272,47 @@ func (bot *ChatBot) getExecutor(dir string) func(string) {
 			os.Exit(0)
 		default:
 			commandFields := strings.Fields(cmds)
-			result, err := bot.CommandProcessor(cmds, commandFields)
+			msg, need_dump, err := bot.CommandProcessor(cmds, commandFields)
 			if err != nil {
 				log.Error(err.Error())
+			} else {
+				if len(msg) > 0 {
+					bot.Say(msg, need_dump)
+				}
 			}
-			log.Debug(result)
 		}
 	}
 }
 
-func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (string, error) {
+func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (string, bool, error) {
 	msg := ""
-	if arr_cmd == nil || len(arr_cmd) == 0 {
-		msg = "Invalid parameters for commandProcessor"
-		log.Error(msg)
-		return msg, nil
+	need_dump := false
+	var err error
+
+	if original_msg == "" {
+		return msg, need_dump, errors.New("Invalid parameters for commandProcessor")
 	}
 
-	log.Debug("Executor dispatching to commander :" + arr_cmd[0])
+	log.Debug("Executor dispatching to commander :" + original_msg)
+	if bot.clientdb != nil {
+		bot.clientdb.AddOptionHistory(&clientdb.OptionHistory{
+			Role:   bot.role.Name,
+			Option: original_msg,
+		})
+	}
+
+	// switch to plugin manager to translate the command and content
+	if tmp_processed, tmp_replaced_msg, tmp_replaced_cmd, tmp_err := bot.plugin_mgr.Execute(original_msg, arr_cmd); tmp_err == nil && tmp_processed {
+		original_msg = tmp_replaced_msg
+		arr_cmd = tmp_replaced_cmd
+	}
+
+	if arr_cmd == nil || len(arr_cmd) <= 0 {
+		return msg, need_dump, errors.New("Invalid updated parameters for commandProcessor")
+	}
 	switch arr_cmd[0] {
 	case "reset":
-		log.Print(arr_cmd)
+		log.Debug("Execute [reset] command on : ", original_msg)
 
 		var role string
 		if len(arr_cmd) > 1 {
@@ -219,43 +322,63 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 		}
 		bot.resetRole(role, false)
 	case "ask":
-		question := original_msg[len(arr_cmd[0]):]
-		if need_quit := bot.Ask(question); need_quit {
-			bot.Close()
-			os.Exit(0)
+		if len(original_msg) > len(arr_cmd[0]) {
+			log.Debug("Execute [ask] command on : ", original_msg)
+
+			question := original_msg[len(arr_cmd[0]):]
+			if need_quit := bot.Ask(question); need_quit {
+				bot.Close()
+				os.Exit(0)
+			}
+		}
+	case PLUGIN_NAME_FILE:
+		if len(original_msg) > len(arr_cmd[0]) {
+			log.Debug("Execute [file-content] command on : ", original_msg)
+			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
+			if need_quit := bot.Ask(original_msg); need_quit {
+				bot.Close()
+				os.Exit(0)
+			}
+		}
+	case PLUGIN_NAME_WEB_CONTENT:
+		if len(original_msg) > len(arr_cmd[0]) {
+			log.Debug("Execute [web-content] command on : ", original_msg)
+
+			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
+		}
+	case PLUGIN_NAME_WEB_SUMMARY:
+		if len(original_msg) > len(arr_cmd[0]) {
+			log.Debug("Execute [web-summary] command on : ", original_msg)
+
+			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
+			if need_quit := bot.Ask(original_msg); need_quit {
+				bot.Close()
+				os.Exit(0)
+			}
 		}
 	case "lookup":
-		text := original_msg[len(arr_cmd[0]):]
-		log.Debug("lookup for", text, "......")
-		msg, err := utility.Lookup(text, config.MyConfig.System.PeferenceLanguage)
-		if err != nil {
-			if len(msg) > 0 {
-				log.Error(msg)
-			} else {
-				log.Error(err.Error())
-			}
-		} else {
-			log.Debug("result : " + msg)
-			bot.Say(msg, false)
+		log.Debug("Execute [lookup] command on : ", original_msg)
+
+		question := original_msg[len(arr_cmd[0]):]
+		msg, err = utility.Lookup(question, config.MyConfig.System.PeferenceLanguage)
+		if err == nil {
+			need_dump = true
 		}
 	case "translate":
-		text := original_msg[len(arr_cmd[0]):]
-		log.Debug("translate for", text, "......")
-		msg, err := utility.Translate(text, config.MyConfig.System.PeferenceLanguage)
-		if err != nil {
-			if len(msg) > 0 {
-				log.Error(msg)
-			} else {
-				log.Error(err.Error())
-			}
-		} else {
-			log.Debug("result : " + msg)
-			bot.Say(msg, false)
+		log.Debug("Execute [translate] command on : ", original_msg)
+
+		question := original_msg[len(arr_cmd[0]):]
+		msg, err = utility.Translate(question, config.MyConfig.System.PeferenceLanguage)
+		if err == nil {
+			need_dump = true
 		}
 	case "cmd":
+		log.Debug("Execute [cmd] command on : ", original_msg)
+
 		if len(arr_cmd) > 1 {
-			cmd_real := strings.ToLower(arr_cmd[1])
 			var cmd_args []string
+
+			cmd_real := strings.ToLower(arr_cmd[1])
 			if len(arr_cmd) > 2 {
 				cmd_args = arr_cmd[2:]
 			}
@@ -268,25 +391,22 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 				obj_cmd.Stderr = os.Stderr
 
 				//	Run the command
-				if err := obj_cmd.Run(); err != nil {
+				if err = obj_cmd.Run(); err != nil {
 					msg = err.Error()
-					bot.Say(msg, true)
-					log.Error(msg)
+					need_dump = true
 				}
 			} else {
 				msg = config.Text("sys_invalid_cmd")
-				bot.Say(msg, true)
-				log.Error(msg)
+				need_dump = true
+				err = errors.New(msg)
 			}
 		} else {
-			msg = config.Text("sys_not_enough_cmd")
-			bot.Say(msg, true)
-			log.Error(msg)
+			msg = ""
+			need_dump = true
+			err = errors.New(config.Text("sys_not_enough_cmd"))
 		}
 	default:
-		// log the tips for missing command
-		msg := config.Text("sys_invalid_cmd") + " : " + arr_cmd[0]
-		log.Info(msg)
+		log.Debug("Execute fallback command on : ", original_msg)
 
 		// treat empty commands as ask chatGPT
 		if len(original_msg) > 1 {
@@ -296,12 +416,12 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 			}
 		} else {
 			msg = config.Text("sys_not_enough_cmd")
-			bot.Say(msg, true)
-			log.Error(msg)
+			need_dump = true
+			err = errors.New(msg)
 		}
 	}
 
-	return msg, nil
+	return msg, need_dump, err
 }
 
 ////////////////////////////////////////////////////////////////
@@ -339,13 +459,17 @@ func (bot *ChatBot) resetRole(role_name string, keep_silent bool) {
 			Content: bot.role.Opening,
 		})
 	}
-	bot.token_counter = 0
+	bot.token_counter_total = 0
+	bot.token_counter_completion = 0
+	bot.token_counter_prompt = 0
 
 	// reopen history
 	bot.initChatHistory(bot.chat_history_path, role_name)
 }
 
 func (bot *ChatBot) Close() {
+	bot.plugin_mgr.Close()
+
 	if bot.chat_history_file != nil {
 		// say goodbay before closing
 		bot.Say(config.Text("byebye_msg")+"\n", false)
@@ -375,13 +499,42 @@ func (bot *ChatBot) Ask(question string) bool {
 	bot.updateHistory("user", question)
 
 	start := time.Now()
+
+	// avoid token length beyond openai limitation
+	var token_len int
+	var init_msg_len int
+	question_len := len(question)
+
+	if len(bot.role.Opening) > 0 {
+		init_msg_len = 2
+	} else {
+		init_msg_len = 1
+	}
+
+	for {
+		token_len = bot.estimateAvailableTokenNumber(question_len)
+		if token_len > 0 {
+			break
+		}
+
+		if len(bot.msg_history) <= init_msg_len {
+			// we assume the default configuration is fine
+			bot.resetRole(bot.role.Name, true)
+			token_len = bot.estimateAvailableTokenNumber(len(question))
+			break
+		} else {
+			// popup the old conversation history but key the prompt and the potential opening
+			bot.msg_history = slices.Delete(bot.msg_history, init_msg_len, init_msg_len+1)
+		}
+	}
+
 	resp, err := bot.client.CreateChatCompletion(
 		context.Background(),
 		gpt3.ChatCompletionRequest{
-			Model:    gpt3.GPT3Dot5Turbo,
-			Messages: bot.msg_history,
-			// MaxTokens: 4000 - bot.token_counter,
-			MaxTokens:   3000,
+			Model:     gpt3.GPT3Dot5Turbo,
+			Messages:  bot.msg_history,
+			MaxTokens: token_len,
+			// MaxTokens:   3000,
 			Temperature: bot.role.Temperature,
 			N:           1,
 		},
@@ -395,7 +548,10 @@ func (bot *ChatBot) Ask(question string) bool {
 		log.Error(err)
 		// need_quit = true
 	} else {
-		bot.token_counter = resp.Usage.TotalTokens
+		bot.token_counter_total = resp.Usage.TotalTokens
+		bot.token_counter_completion = resp.Usage.CompletionTokens
+		bot.token_counter_prompt = resp.Usage.PromptTokens
+
 		message := resp.Choices[0].Message.Content
 
 		fmt.Println(bot.role.Avatar + prompt_tip_flag)
@@ -403,14 +559,28 @@ func (bot *ChatBot) Ask(question string) bool {
 
 		gray := color.New(color.FgHiBlack).PrintfFunc()
 		gray(
-			"%60s ( %d / %d ) %ds \n",
+			"%60s ( %d + %d = %d ) %ds \n\n",
 			strftime.Format(time.Now(), "%Y-%m-%d %H:%M:%S"),
-			bot.token_counter, config.MaxTokens, elapsed/100000000,
+			bot.token_counter_prompt,
+			bot.token_counter_completion,
+			bot.token_counter_total,
+			elapsed/100000000,
 		)
 		bot.updateHistory("assistant", message)
+
+		bot.kb_padding.ResetInputMode()
 	}
 
 	return need_quit
+}
+
+func (bot *ChatBot) estimateAvailableTokenNumber(question_leng int) int {
+	available_len := 4096 - bot.token_counter_total - question_leng
+	for _, msg := range bot.msg_history {
+		available_len = available_len - len(msg.Content)
+	}
+
+	return available_len
 }
 
 func (bot *ChatBot) updateHistory(role string, content string) {
@@ -422,10 +592,10 @@ func (bot *ChatBot) updateHistory(role string, content string) {
 
 	// dump conversation history if necessary
 	if role == "user" {
-		bot.dumpChatHistory("#### " + content + "\n")
+		bot.dumpChatHistory("#### " + default_user_avatar + "  " + content + "\n")
 	} else {
 		bot.dumpChatHistory(bot.role.Avatar + prompt_tip_flag + "\n")
-		bot.dumpChatHistory(content + "\n")
+		bot.dumpChatHistory(content + "\n\n")
 	}
 }
 

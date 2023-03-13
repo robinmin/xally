@@ -8,9 +8,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"robinmin.net/tools/xally/cmd/client/chatbot"
-	"robinmin.net/tools/xally/config"
-	"robinmin.net/tools/xally/shared/utility"
+	"github.com/robinmin/xally/cmd/client/service"
+	"github.com/robinmin/xally/config"
+	"github.com/robinmin/xally/shared/utility"
 )
 
 var (
@@ -39,7 +39,7 @@ func init() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `xally version: xally/%s
-Usage: xally [-hl] [-f config_file] [-c command] [-r role] [-d history_path] [-p language_preference]
+Usage: xally [-hv] [-f config_file] [-c command] [-r role] [-d history_path] [-p language_preference]
 
 Options:
 `, config.Version)
@@ -56,7 +56,7 @@ func main() {
 
 	// load configuration
 	var err error
-	if _, err = config.LoadConfig(config_file, verbose); err != nil {
+	if _, err = config.LoadClientConfig(config_file, verbose); err != nil {
 		fmt.Println(err)
 	}
 
@@ -84,11 +84,12 @@ func main() {
 	defer logger.Close()
 	log.Debug("System initializing......")
 
-	bot := chatbot.NewChatbot(
+	bot := service.NewChatbot(
 		config.MyConfig.System.ChatHistoryPath,
 		config.AppName,
 		role,
 		len(config.MyConfig.System.ChatHistoryPath) > 0,
+		verbose,
 	)
 	defer bot.Close()
 
@@ -96,11 +97,14 @@ func main() {
 		bot.Run()
 	} else {
 		commandFields := strings.Fields(command)
-		result, err := bot.CommandProcessor(command, commandFields)
+		msg, need_dump, err := bot.CommandProcessor(command, commandFields)
 		if err != nil {
 			log.Error(err.Error())
+		} else {
+			if len(msg) > 0 {
+				bot.Say(msg, need_dump)
+			}
 		}
-		log.Debug(result)
 	}
 
 	log.Debug("Quit System......")

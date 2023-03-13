@@ -18,13 +18,13 @@ import (
 	"github.com/charmbracelet/glamour"
 	log "github.com/sirupsen/logrus"
 
-	"robinmin.net/tools/xally/config"
+	"github.com/robinmin/xally/config"
 )
 
 type LogFile struct {
-	file_handle *os.File
-	log_path    string
-	level       string
+	FileHandle *os.File
+	LogPath    string
+	LogLevel   string
 }
 
 func GetYYYYMMDD() string {
@@ -39,11 +39,11 @@ func GetYYYYMM() string {
 
 func NewLog(log_path string, name string, level string) *LogFile {
 	logger := &LogFile{
-		log_path: log_path,
-		level:    level,
+		LogPath:  log_path,
+		LogLevel: level,
 	}
-	if _, err := os.Stat(logger.log_path); os.IsNotExist(err) {
-		errDir := os.MkdirAll(logger.log_path, 0755)
+	if _, err := os.Stat(logger.LogPath); os.IsNotExist(err) {
+		errDir := os.MkdirAll(logger.LogPath, 0755)
 		if errDir != nil {
 			log.Error(err)
 			return logger
@@ -51,15 +51,15 @@ func NewLog(log_path string, name string, level string) *LogFile {
 	}
 
 	var err error
-	log_file := logger.log_path + "/" + name + "_" + GetYYYYMMDD() + ".log"
-	if logger.file_handle == nil {
-		logger.file_handle, err = os.OpenFile(log_file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	log_file := logger.LogPath + "/" + name + "_" + GetYYYYMMDD() + ".log"
+	if logger.FileHandle == nil {
+		logger.FileHandle, err = os.OpenFile(log_file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Error(err)
 			return logger
 		}
 
-		log.SetOutput(logger.file_handle)
+		log.SetOutput(logger.FileHandle)
 		// log.SetFormatter(&log.JSONFormatter{})
 		var level_int log.Level
 		if level_int, err = log.ParseLevel(level); err == nil {
@@ -72,9 +72,9 @@ func NewLog(log_path string, name string, level string) *LogFile {
 }
 
 func (lf *LogFile) Close() {
-	if lf.file_handle != nil {
-		lf.file_handle.Close()
-		lf.file_handle = nil
+	if lf.FileHandle != nil {
+		lf.FileHandle.Close()
+		lf.FileHandle = nil
 	}
 }
 

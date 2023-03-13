@@ -105,7 +105,7 @@ func FindHomeDir(verbose bool) (string, error) {
 	return default_config_file, nil
 }
 
-func LoadConfig(config_file string, verbose bool) (*SysConfig, error) {
+func LoadClientConfig(config_file string, verbose bool) (*SysConfig, error) {
 	var temp_file string
 	var default_config_file string
 	var err error

@@ -34,7 +34,7 @@ type SysRole struct {
 	Name        string  `yaml:"name,omitempty"`
 	Avatar      string  `yaml:"avatar,omitempty"`
 	Temperature float32 `yaml:"temperature,omitempty"`
-	TopN        int     `yaml:"top_n,omitempty"`
+	TopP        int     `yaml:"top_p,omitempty"`
 	Prompt      string  `yaml:"prompt,omitempty"`
 	Opening     string  `yaml:"opening,omitempty"`
 }
@@ -66,7 +66,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 			LogPath:           "logs",
 			LogLevel:          "info",
 			PeferenceLanguage: os.Getenv("LANG"),
-			DefaultRole:       "expert",
+			DefaultRole:       "fullstack",
 			APIEndpointOpenai: "https://api.openai.com/v1",
 			APIEndpointDeepl:  "https://api-free.deepl.com/v2",
 			APIKeyOpenai:      "",
@@ -77,7 +77,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 				Name:        "expert",
 				Avatar:      "🐬",
 				Temperature: 0.2,
-				TopN:        100,
+				TopP:        1,
 				Prompt:      `You are ChatGPT, a large language model trained by OpenAI. Answer as concisely as possible.`,
 				Opening:     "",
 			},
@@ -85,7 +85,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 				Name:        "assistant",
 				Avatar:      "🧰",
 				Temperature: 0.2,
-				TopN:        100,
+				TopP:        1,
 				Prompt:      `You are a ChatGPT-based daily chit-chat bot with answers that are as concise and soft as possible..`,
 				Opening:     "",
 			},
@@ -93,42 +93,49 @@ func NewSysConfig(cfg_file string) *SysConfig {
 				Name:        "architect",
 				Avatar:      "🏡",
 				Temperature: 0.2,
-				TopN:        100,
+				TopP:        1,
 				Prompt:      `I want you to act as an IT Architect. I will provide some details about the functionality of an application or other digital product, and it will be your job to come up with ways to integrate it into the IT landscape. This could involve analyzing business requirements, performing a gap analysis and mapping the functionality of the new system to the existing IT landscape. Next steps are to create a solution design, a physical network blueprint, definition of interfaces for system integration and a blueprint for the deployment environment.`,
 			},
 			"tester": {
 				Name:        "tester",
 				Avatar:      "⁉",
 				Temperature: 0.2,
-				TopN:        100,
+				TopP:        1,
 				Prompt:      `I want you to act as a software quality assurance tester for a new software application. Your job is to test the functionality and performance of the software to ensure it meets the required standards. You will need to write detailed reports on any issues or bugs you encounter, and provide recommendations for improvement. Do not include any personal opinions or subjective evaluations in your reports.`,
+			},
+			"fullstack": {
+				Name:        "fullstack",
+				Avatar:      "🦄",
+				Temperature: 0.2,
+				TopP:        1,
+				Prompt:      `I want you to act as a Senior full stack developer. I will describe the details, you will take first priority to use these tools: SQL, golang, Spring Boot. Code it in production level as concisely as possible."`,
 			},
 			"frontend": {
 				Name:        "frontend",
 				Avatar:      "🍏",
 				Temperature: 0.2,
-				TopN:        100,
+				TopP:        1,
 				Prompt:      "I want you to act as a Senior Frontend developer. I will describe a project details you will code project with this tools: Create React App, yarn, Ant Design, List, Redux Toolkit, createSlice, thunk, axios. You should merge files in single index.js file and nothing else. Do not write explanations.",
 			},
 			"backend": {
 				Name:        "backend",
 				Avatar:      "🌲",
 				Temperature: 0.2,
-				TopN:        100,
+				TopP:        1,
 				Prompt:      "I want you to act as a Senior Backend developer. I will describe a project details you will code project with this tools: SQL, golang, Spring Boot. Do not write explanations.",
 			},
 			"frontend_mini": {
 				Name:        "frontend_mini",
 				Avatar:      "🐸",
 				Temperature: 0.2,
-				TopN:        100,
+				TopP:        1,
 				Prompt:      "I want you act as a Senior wechat mini programer. I will descript the request, then you need to generate code in Taro with necesary comments. Please proccess all kinds of fails and exceptions in production level.",
 			},
 			"translator_en": {
 				Name:        "translator_en",
 				Avatar:      "🍭",
 				Temperature: 0.2,
-				TopN:        100,
+				TopP:        1,
 				Prompt:      `I want you to act as an English translator, spelling corrector and improver. I will speak to you in any language and you will detect the language, translate it and answer in the corrected and improved version of my text, in English. I want you to replace my simplified A0-level words and sentences with more beautiful and elegant, upper level English words and sentences. Keep the meaning same, but make them more literary. I want you to only reply the correction, the improvements and nothing else, do not write explanations.`,
 			},
 		},
@@ -138,6 +145,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 	}
 	return cfg
 }
+
 func (cfg *SysConfig) DumpIntoYAML(cfg_file string) (string, error) {
 	yaml_data, err := yaml.Marshal(cfg)
 	if err != nil {
