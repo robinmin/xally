@@ -1,4 +1,4 @@
-package cmd
+package chatbot
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"robinmin.net/tools/xally/config"
+	"robinmin.net/tools/xally/shared/utility"
 )
 
 const default_user_avatar = "👦"
@@ -226,7 +227,7 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 	case "lookup":
 		text := original_msg[len(arr_cmd[0]):]
 		log.Debug("lookup for", text, "......")
-		msg, err := lookup(text, config.MyConfig.System.PeferenceLanguage)
+		msg, err := utility.Lookup(text, config.MyConfig.System.PeferenceLanguage)
 		if err != nil {
 			if len(msg) > 0 {
 				log.Error(msg)
@@ -240,7 +241,7 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 	case "translate":
 		text := original_msg[len(arr_cmd[0]):]
 		log.Debug("translate for", text, "......")
-		msg, err := translate(text, config.MyConfig.System.PeferenceLanguage)
+		msg, err := utility.Translate(text, config.MyConfig.System.PeferenceLanguage)
 		if err != nil {
 			if len(msg) > 0 {
 				log.Error(msg)
@@ -355,7 +356,7 @@ func (bot *ChatBot) Close() {
 }
 
 func (bot *ChatBot) Say(msg string, need_dump bool) {
-	echo_info(msg)
+	utility.EchoInfo(msg)
 	if need_dump {
 		bot.dumpChatHistory(msg)
 	}
@@ -462,7 +463,7 @@ func (bot *ChatBot) initChatHistory(chat_history_path string, prefix string) boo
 		bot.chat_history_file = nil
 
 		// open new one
-		chat_history_fname := filepath.Join(chat_history_path, prefix+"_"+get_yyyymm()+".md")
+		chat_history_fname := filepath.Join(chat_history_path, prefix+"_"+utility.GetYYYYMM()+".md")
 		var err error
 		log.Debug("Chat History will be stored at ", chat_history_fname)
 		bot.chat_history_file, err = os.OpenFile(chat_history_fname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)

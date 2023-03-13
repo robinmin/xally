@@ -8,8 +8,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"robinmin.net/tools/xally/cmd"
+	"robinmin.net/tools/xally/cmd/client/chatbot"
 	"robinmin.net/tools/xally/config"
+	"robinmin.net/tools/xally/shared/utility"
 )
 
 var (
@@ -79,11 +80,11 @@ func main() {
 	}
 
 	// initialize log files
-	logger := cmd.NewLog(config.MyConfig.System.LogPath, config.AppName, config.MyConfig.System.LogLevel)
+	logger := utility.NewLog(config.MyConfig.System.LogPath, config.AppName, config.MyConfig.System.LogLevel)
 	defer logger.Close()
 	log.Debug("System initializing......")
 
-	bot := cmd.NewChatbot(
+	bot := chatbot.NewChatbot(
 		config.MyConfig.System.ChatHistoryPath,
 		config.AppName,
 		role,
@@ -104,31 +105,3 @@ func main() {
 
 	log.Debug("Quit System......")
 }
-
-// func test_http_2_markdown() {
-// 	url := "https://stackoverflow.com/questions/38673673/access-http-response-as-string-in-go"
-// 	// headers := map[string]string{
-// 	// 	"Content-Type": "application/json",
-// 	// }
-// 	// payload := `{"key": "value"}`
-// 	headers := map[string]string{}
-// 	payload := ""
-
-// 	statusCode, responseBody, err := cmd.FetchURL("GET", url, payload, headers)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return
-// 	}
-// 	fmt.Println("url : ", url)
-// 	fmt.Println("code / length : ", statusCode, " / ", len(responseBody))
-// 	// fmt.Println("body : ", responseBody)
-
-// 	converter := md.NewConverter("", true, nil)
-// 	markdown, err := converter.ConvertString(responseBody)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	out, _ := glamour.Render(markdown, "dark")
-// 	fmt.Print(out)
-// }

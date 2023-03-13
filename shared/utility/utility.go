@@ -1,4 +1,4 @@
-package cmd
+package utility
 
 import (
 	"bytes"
@@ -21,21 +21,18 @@ import (
 	"robinmin.net/tools/xally/config"
 )
 
-// Global koanf instance. Use "." as the key path delimiter. This can be "/" or any character.
-// var k = koanf.New(".")
-
 type LogFile struct {
 	file_handle *os.File
 	log_path    string
 	level       string
 }
 
-func get_yyyymmdd() string {
+func GetYYYYMMDD() string {
 	t := time.Now()
 	return fmt.Sprintf("%04d%02d%02d", t.Year(), t.Month(), t.Day())
 }
 
-func get_yyyymm() string {
+func GetYYYYMM() string {
 	t := time.Now()
 	return fmt.Sprintf("%04d%02d", t.Year(), t.Month())
 }
@@ -54,7 +51,7 @@ func NewLog(log_path string, name string, level string) *LogFile {
 	}
 
 	var err error
-	log_file := logger.log_path + "/" + name + "_" + get_yyyymmdd() + ".log"
+	log_file := logger.log_path + "/" + name + "_" + GetYYYYMMDD() + ".log"
 	if logger.file_handle == nil {
 		logger.file_handle, err = os.OpenFile(log_file, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 		if err != nil {
@@ -81,7 +78,7 @@ func (lf *LogFile) Close() {
 	}
 }
 
-func echo_info(msg string) {
+func EchoInfo(msg string) {
 	if len(msg) > 0 {
 		out, _ := glamour.Render(msg, "dark")
 		fmt.Print(out)
@@ -97,7 +94,7 @@ func GetCurrPath() string {
 }
 
 // 翻译函数，接受要翻译的文本和目标语言代码，返回翻译结果和错误信息
-func translate(text string, lang string) (string, error) {
+func Translate(text string, lang string) (string, error) {
 	msg := ""
 
 	// 设置DeepL API的URL和API密钥
@@ -155,7 +152,7 @@ func translate(text string, lang string) (string, error) {
 }
 
 // 查询字典函数，接受要查询的单词和目标语言代码，返回查询结果和错误信息
-func lookup(text string, lang string) (string, error) {
+func Lookup(text string, lang string) (string, error) {
 	msg := ""
 
 	// 设置DeepL API的URL和API密钥

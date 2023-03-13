@@ -5,8 +5,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"robinmin.net/tools/xally/cmd"
 	"robinmin.net/tools/xally/config"
+	"robinmin.net/tools/xally/shared/utility"
 )
 
 /******************************************************************************
@@ -16,11 +16,11 @@ import (
 *******************************************************************************/
 func main() {
 	// initialize log files
-	lg := cmd.NewLog("logs", config.AppName, "debug")
+	lg := utility.NewLog("logs", config.AppName, "debug")
 	defer lg.Close()
 	log.Debug("System initializing......")
 
 	pwd, _ := os.Getwd()
-	log.Debug("GetCurrPath = ", cmd.GetCurrPath())
+	log.Debug("GetCurrPath = ", utility.GetCurrPath())
 	log.Debug("PWD = ", pwd)
 }
