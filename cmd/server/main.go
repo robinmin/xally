@@ -67,6 +67,7 @@ func main() {
 	var err error
 	if _, err = config.LoadServerConfig(config_file, verbose); err != nil {
 		fmt.Println(err)
+		return
 	}
 
 	// initialize log files
@@ -79,21 +80,18 @@ func main() {
 	// 禁用控制台颜色，将日志写入文件时不需要控制台颜色。
 	// gin.DisableConsoleColor()
 
-	// serverdb.InitServerDB(config.SvrConfig.DSN, true)
-	// token := serverdb.InitToken(config.SvrConfig.TokenApiSecret, config.SvrConfig.TokenLifespan)
-
 	// 初始化gin框架
 	api, router := controller.NewAPIHandler(
-		config.SvrConfig.TokenApiSecret,
-		config.SvrConfig.TokenLifespan,
-		config.SvrConfig.DSN,
+		config.SvrConfig.Server.APITokenSecret,
+		config.SvrConfig.Server.APITokenLifespan,
+		config.SvrConfig.Server.DSN,
 		verbose,
 	)
 
 	// 注册路由
-	api.RegisterRoutes(router)
+	api.RegisterRoutes(router, &config.SvrConfig.Server.Routes)
 	server := &http.Server{
-		Addr:    config.SvrConfig.ServerPort,
+		Addr:    config.SvrConfig.Server.ListenAddr,
 		Handler: router,
 	}
 
