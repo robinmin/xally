@@ -1,18 +1,19 @@
 package serverdb
 
 import (
+	"errors"
 	"fmt"
+	"time"
 
+	"github.com/robinmin/xally/config"
+	"github.com/robinmin/xally/shared/utility"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
-
-// var Token *token.Token
 
 func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 	var err error
@@ -39,192 +40,117 @@ func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 		if err = DB.AutoMigrate(&User{}); err != nil {
 			log.Error(err)
 		}
-		log.Debug("TODO: migrate")
+		// log.Debug("TODO: migrate")
 	}
 
 	return DB, err
 }
 
 func (user *User) SaveUser() (int64, error) {
-	var err error
-
 	tx := DB.Create(&user)
 	if tx.Error != nil {
-		return 0, err
+		return 0, tx.Error
 	}
 	return tx.RowsAffected, nil
 }
 
-func (user *User) BeforeSave() error {
-	//turn password into hash
-	// hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	// if err != nil {
-	// 	return err
-	// }
-	// user.Password = string(hashedPassword)
+func extractUserInfo(access_token string) *User {
+	access_info, _ := utility.ExtractAccessInfo(config.SvrConfig.Server.APITokenSecret, access_token)
+	if access_info == nil {
+		log.Error("Faield to extract access information from access token : " + access_token)
+		return nil
+	}
 
-	// //remove spaces in username
-	// user.Username = html.EscapeString(strings.TrimSpace(user.Username))
+	user := &User{
+		Token:      access_token,
+		UserID:     access_info["uid"].(string),
+		Username:   access_info["username"].(string),
+		Email:      access_info["email"].(string),
+		DeviceInfo: access_info["device_info"].(string),
+		Status:     0, // by default, waiting for activiate
+		RegisterAt: time.Now(),
+		ExpiredAt:  time.Now(), // by default, expieried immediately. waiting for activiate
+	}
+	return user
+}
+func RegisterUser(access_token string) (*User, error) {
+	user := extractUserInfo(access_token)
+	if user == nil {
+		msg := "Faield to extract user info from access from access token : " + access_token
+		log.Error(msg)
+		return nil, errors.New(msg)
+	}
+
+	rows, err := user.SaveUser()
+	if err != nil {
+		msg := "Faield to add new user by token : " + access_token
+		log.Error(msg)
+		return nil, err
+	}
+	log.Printf("# of User has been added : %v", rows)
+
+	return user, nil
+}
+
+func GetUserByToken(access_token string) (*User, error) {
+	user := extractUserInfo(access_token)
+	if user == nil {
+		msg := "Faield to extract user info from access from access token : " + access_token
+		log.Error(msg)
+		return nil, errors.New(msg)
+	}
+
+	var tmp_user User
+	tx := DB.Where(&User{
+		// Token:      user.Token,
+		UserID:     user.UserID,
+		Username:   user.Username,
+		Email:      user.Email,
+		DeviceInfo: user.DeviceInfo,
+		Status:     1,
+	}).First(&tmp_user)
+	if tx.Error != nil {
+		log.Error("Failed to query user by access token : " + access_token)
+		return nil, tx.Error
+	}
+
+	if tmp_user.ExpiredAt.Before(time.Now()) {
+		return nil, errors.New("Token has expired")
+	}
+	return &tmp_user, nil
+}
+
+func GetAllUsers() (map[string]time.Time, error) {
+	var valid_users []User
+	tx := DB.Where("status = 1 and expired_at > ?", time.Now()).Find(&valid_users)
+	if tx.Error != nil {
+		log.Error("Failed to get all token list ")
+		return nil, tx.Error
+	}
+
+	// update the user list
+	user_list := make(map[string]time.Time)
+	for _, tmp_user := range valid_users {
+		user_list[tmp_user.Token] = tmp_user.ExpiredAt
+	}
+
+	return user_list, nil
+}
+
+func ActiviateUser(access_token string) error {
+	tx := DB.Model(&User{}).Where("token = ?", access_token).Update("status", 1)
+	if tx.Error != nil {
+		log.Error("Failed to activiate user")
+		return tx.Error
+	}
 	return nil
 }
 
-func VerifyPassword(password, hashedPassword string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+func DeactiviateUser(access_token string) error {
+	tx := DB.Model(&User{}).Where("token = ?", access_token).Update("status", 0)
+	if tx.Error != nil {
+		log.Error("Failed to activiate user")
+		return tx.Error
+	}
+	return nil
 }
-
-func LoginCheck(username string, password string) (string, error) {
-	// var err error
-
-	// u := User{}
-	// err = DB.Model(User{}).Where("username = ?", username).Take(&u).Error
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// err = VerifyPassword(password, u.Password)
-	// if err != nil && err == bcrypt.ErrMismatchedHashAndPassword {
-	// 	return "", err
-	// }
-
-	// token, err := Token.GenerateToken(u.ID)
-	// if err != nil {
-	// 	return "", err
-	// }
-
-	// return token, nil
-	return "", nil
-}
-
-// import (
-//     "database/sql"
-//     "errors"
-//     "time"
-
-//     "github.com/google/uuid"
-// )
-
-// type Token struct {
-//     ID        string    `json:"id"`
-//     UserID    string    `json:"user_id"`
-//     Token     string    `json:"-"`
-//     CreatedAt time.Time `json:"created_at"`
-//     ExpiresAt time.Time `json:"expires_at"`
-// }
-
-// func (t *Token) Create(db *sql.DB) error {
-//     t.ID = uuid.New().String()
-//     t.Token = uuid.New().String()
-
-//     _, err := db.Exec("INSERT INTO tokens (id, user_id, token, created_at,
-// expires_at) VALUES ($1, $2, $3, $4, $5)", t.ID, t.UserID, t.Token,
-// time.Now(), time.Now().Add(time.Hour*24))
-//     if err != nil {
-//         return err
-//     }
-
-//     return nil
-// }
-
-// func GetToken(db *sql.DB, token string) (*Token, error) {
-//     var t Token
-
-//     err := db.QueryRow("SELECT id, user_id, token, created_at, expires_at
-// FROM tokens WHERE token = $1", token).Scan(&t.ID, &t.UserID, &t.Token,
-// &t.CreatedAt, &t.ExpiresAt)
-//     if err != nil {
-//         return nil, err
-//     }
-
-//     if t.ExpiresAt.Before(time.Now()) {
-//         return nil, errors.New("Token has expired")
-//     }
-
-//     return &t, nil
-// }
-
-// func DeleteToken(db *sql.DB, token string) error {
-//     _, err := db.Exec("DELETE FROM tokens WHERE token = $1", token)
-//     if err != nil {
-//         return err
-//     }
-
-//     return nil
-// }
-
-// import (
-//     "database/sql"
-//     "errors"
-//     "time"
-
-//     "golang.org/x/crypto/bcrypt"
-// )
-
-// type User struct {
-//     ID        string    `json:"id"`
-//     Username  string    `json:"username"`
-//     Password  string    `json:"-"`
-//     CreatedAt time.Time `json:"created_at"`
-//     UpdatedAt time.Time `json:"updated_at"`
-// }
-
-// func (u *User) Create(db *sql.DB) error {
-//     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password),
-// bcrypt.DefaultCost)
-//     if err != nil {
-//         return err
-//     }
-
-//     err = db.QueryRow("INSERT INTO users (username, password) VALUES ($1, $2)
-// RETURNING id, created_at, updated_at", u.Username,
-// hashedPassword).Scan(&u.ID, &u.CreatedAt, &u.UpdatedAt)
-//     if err != nil {
-//         return err
-//     }
-
-//     return nil
-// }
-
-// func GetUser(db *sql.DB, id string) (*User, error) {
-//     var user User
-
-//     err := db.QueryRow("SELECT id, username, password, created_at, updated_at
-// FROM users WHERE id = $1", id).Scan(&user.ID, &user.Username,
-// &user.Password, &user.CreatedAt, &user.UpdatedAt)
-//     if err != nil {
-//         return nil, err
-//     }
-
-//     return &user, nil
-// }
-
-// func (u *User) Update(db *sql.DB, id string) error {
-//     if u.ID != id {
-//         return errors.New("User ID in payload does not match ID in URL")
-//     }
-
-//     if u.Password != "" {
-//         hashedPassword, err := bcrypt.GenerateFromPassword([]byte(u.Password),
-// bcrypt.DefaultCost)
-//         if err != nil {
-//             return err
-//         }
-//         u.Password = string(hashedPassword)
-//     }
-
-//     _, err := db.Exec("UPDATE users SET username = $1, password = $2,
-// updated_at = $3 WHERE id = $4", u.Username, u.Password, time.Now(), id)
-//     if err != nil {
-//         return err
-//     }
-
-//     return nil
-// }
-
-// func DeleteUser(db *sql.DB, id string) error {
-//     _, err := db.Exec("DELETE FROM users WHERE id = $1", id)
-//     if err != nil {
-//         return err
-//     }
-
-//     return nil
-// }
