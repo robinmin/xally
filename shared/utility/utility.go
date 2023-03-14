@@ -11,11 +11,14 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/glamour"
+	"github.com/denisbrodbeck/machineid"
+	"github.com/dgrijalva/jwt-go"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/robinmin/xally/config"
@@ -269,4 +272,65 @@ func FetchURL(verb string, url string, payload string, headers map[string]string
 
 	// 返回响应状态码、响应体和错误信息
 	return resp_code, resp_body, nil
+}
+
+func GenerateAccessToken(app_key string, email string) (string, error) {
+	var err error
+	var device_info string
+	var current_user *user.User
+
+	// get user id
+	current_user, err = user.Current()
+	if err != nil {
+		log.Error("Failed to get current user information: %v", err.Error())
+		return "", err
+	}
+
+	// get device info
+	if len(app_key) > 0 {
+		device_info, err = machineid.ProtectedID(app_key)
+	} else {
+		device_info, err = machineid.ID()
+	}
+	if err != nil {
+		log.Error("Failed to get device information: %v", err.Error())
+		return "", err
+	}
+
+	claims := jwt.MapClaims{}
+	claims["authorized"] = true
+
+	claims["uid"] = current_user.Uid
+	claims["username"] = current_user.Username
+	claims["email"] = email
+	claims["device_info"] = device_info
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString([]byte(app_key))
+}
+
+func ExtractAccessInfo(app_key string, access_token string) (jwt.MapClaims, error) {
+	if access_token == "" {
+		log.Error("Blank access token in ExtractAccessInfo")
+		return nil, nil
+	}
+
+	token, err := jwt.Parse(access_token, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
+		}
+		return []byte(app_key), nil
+	})
+	if err != nil {
+		log.Error(err.Error())
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if ok && token.Valid {
+		return claims, nil
+	}
+
+	return nil, errors.New("Invalid access token")
 }
