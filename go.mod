@@ -6,6 +6,7 @@ require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.7
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/charmbracelet/glamour v0.6.0
+	github.com/denisbrodbeck/machineid v1.0.1
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/fatih/color v1.14.1
 	github.com/gin-gonic/gin v1.9.0
