@@ -149,6 +149,10 @@ func LoadClientConfig(config_file string, verbose bool) (*SysConfig, error) {
 			}
 			return MyConfig, err
 		}
+		// update key from env var in case of blank
+		if MyConfig.System.APIKeyOpenai == "" {
+			MyConfig.System.APIKeyOpenai = os.Getenv("OPENAI_API_KEY")
+		}
 	}
 
 	return MyConfig, nil
