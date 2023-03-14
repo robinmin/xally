@@ -12,6 +12,7 @@ import (
 const AppName = "X-Ally"
 const Version = "0.0.5"
 const MaxTokens = 4096
+const PROXY_TOKEN_NAME = "X-ALLY-TOKEN"
 
 // type T struct {
 // 	Delim Rune `yaml:"delim"`
@@ -49,6 +50,11 @@ type SysSystem struct {
 	APIEndpointDeepl  string `yaml:"api_endpoint_deepl,omitempty"`
 	APIKeyOpenai      string `yaml:"api_key_openai,omitempty"`
 	APIKeyDeepl       string `yaml:"api_key_deepl,omitempty"`
+
+	APIOrgIDOpenai string `yaml:"api_orgid_openai,omitempty"`
+	UseSharedMode  uint32 `yaml:"use_shared_mode,omitempty"`
+	SharedToken    string `yaml:"shared_token,omitempty"`
+	Email          string `yaml:"email,omitempty"`
 }
 
 type SysConfig struct {
@@ -71,6 +77,11 @@ func NewSysConfig(cfg_file string) *SysConfig {
 			APIEndpointDeepl:  "https://api-free.deepl.com/v2",
 			APIKeyOpenai:      "",
 			APIKeyDeepl:       "",
+
+			APIOrgIDOpenai: "",
+			UseSharedMode:  0,
+			SharedToken:    "",
+			Email:          "",
 		},
 		Roles: map[string]SysRole{
 			"expert": {
@@ -144,6 +155,10 @@ func NewSysConfig(cfg_file string) *SysConfig {
 		cfg.System.PeferenceLanguage = "CN"
 	}
 	return cfg
+}
+
+func (cfg *SysConfig) IsSharedMode() bool {
+	return cfg.System.UseSharedMode > 0 && len(cfg.System.SharedToken) > 0
 }
 
 func (cfg *SysConfig) DumpIntoYAML(cfg_file string) (string, error) {
