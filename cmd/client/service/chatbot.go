@@ -137,7 +137,7 @@ type ChatBot struct {
 	chat_history_file *os.File
 	chat_history_path string
 
-	client                   *gpt3.Client
+	client                   *ChatGPTCLient
 	msg_history              []gpt3.ChatCompletionMessage
 	log_history              bool
 	token_counter_total      int
@@ -176,12 +176,9 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 	bot.clientdb, _ = clientdb.InitClientDB(path.Join(config.MyConfig.System.ChatHistoryPath, "xally.db"), verbose)
 
 	api_key := config.MyConfig.System.APIKeyOpenai
-	if api_key == "" {
-		api_key = os.Getenv("OPENAI_API_KEY")
-		if api_key == "" {
-			bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
-			return bot
-		}
+	if !config.MyConfig.IsSharedMode() && api_key == "" {
+		bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
+		return bot
 	}
 
 	// build the client object with existing API keys and API endpoints
@@ -191,8 +188,11 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 		api_cfg.BaseURL = api_endpoint
 	}
 	log.Println("api_cfg.BaseURL  = ", api_cfg.BaseURL)
-	bot.client = gpt3.NewClientWithConfig(api_cfg)
-	// bot.client.
+	// bot.client = gpt3.NewClientWithConfig(api_cfg)
+	bot.client = &ChatGPTCLient{
+		Client:     *gpt3.NewClientWithConfig(api_cfg),
+		HTTPClient: api_cfg.HTTPClient,
+	}
 
 	greeting_msg := fmt.Sprintf(config.Text("greeting_msg"), bot.name, config.Version, bot.name, strftime.Format(time.Now(), "%Y-%m-%d %H:%M:%S"))
 	var option_history []string
@@ -517,12 +517,14 @@ func (bot *ChatBot) Ask(question string) bool {
 			break
 		}
 
-		if len(bot.msg_history) <= init_msg_len {
+		if len(bot.msg_history) < init_msg_len {
+			fmt.Println("🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸 resetting role......")
 			// we assume the default configuration is fine
 			bot.resetRole(bot.role.Name, true)
 			token_len = bot.estimateAvailableTokenNumber(len(question))
 			break
 		} else {
+			fmt.Println("🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻 erasing old history......")
 			// popup the old conversation history but key the prompt and the potential opening
 			bot.msg_history = slices.Delete(bot.msg_history, init_msg_len, init_msg_len+1)
 		}
