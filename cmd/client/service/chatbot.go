@@ -77,7 +77,8 @@ func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
 			{Text: PLUGIN_NAME_WEB_SUMMARY, Description: config.Text("tips_suggestion_web_summary")},
 		},
 		File: {
-			{Text: PLUGIN_NAME_FILE, Description: config.Text("tips_suggestion_file")},
+			{Text: PLUGIN_NAME_FILE_CONTENT, Description: config.Text("tips_suggestion_file_content")},
+			{Text: PLUGIN_NAME_FILE_SUMMARY, Description: config.Text("tips_suggestion_file_summary")},
 		},
 		Cmd: {
 			{Text: "cmd", Description: config.Text("tips_suggestion_cmd")},
@@ -331,9 +332,16 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 				os.Exit(0)
 			}
 		}
-	case PLUGIN_NAME_FILE:
+	case PLUGIN_NAME_FILE_CONTENT:
 		if len(original_msg) > len(arr_cmd[0]) {
 			log.Debug("Execute [file-content] command on : ", original_msg)
+
+			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
+		}
+	case PLUGIN_NAME_FILE_SUMMARY:
+		if len(original_msg) > len(arr_cmd[0]) {
+			log.Debug("Execute [file-summary] command on : ", original_msg)
+
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
 			if need_quit := bot.Ask(original_msg); need_quit {
 				bot.Close()
@@ -511,6 +519,7 @@ func (bot *ChatBot) Ask(question string) bool {
 		init_msg_len = 1
 	}
 
+	// adjust max token length
 	for {
 		token_len = bot.estimateAvailableTokenNumber(question_len)
 		if token_len > 0 {
@@ -577,9 +586,14 @@ func (bot *ChatBot) Ask(question string) bool {
 }
 
 func (bot *ChatBot) estimateAvailableTokenNumber(question_leng int) int {
-	available_len := 4096 - bot.token_counter_total - question_leng
+	available_len := config.MaxTokens - bot.token_counter_total - question_leng
+
 	for _, msg := range bot.msg_history {
-		available_len = available_len - len(msg.Content)
+		available_len = available_len - 4 // every message follows <im_start>{role/name}\n{content}<im_end>\n
+		// TODO: need to fine tune going forward, replaced with GPT-index instead of length of contents
+		available_len = available_len - len(msg.Content) - len(msg.Name)
+		available_len = available_len - 1 // - len(msg.Role), role is always required and always 1 token
+		available_len = available_len - 2 // every reply is primed with <im_start>assistant
 	}
 
 	return available_len
