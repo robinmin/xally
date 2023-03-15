@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +31,7 @@ const (
 
 // APIHandler 是所有API的处理器
 type APIHandler struct {
-	WhiteList map[string]time.Time
+	WhiteList *serverdb.WhiteList
 	// TokenService *token.Token
 	DB *gorm.DB
 }
@@ -48,10 +49,22 @@ func NewAPIHandler(
 		h.DB, _ = serverdb.InitServerDB(connection_str, verbose)
 	}
 
-	var err error
-	if h.WhiteList, err = serverdb.GetAllUsers(); err != nil {
-		log.Error("Filed to load white list", err.Error())
+	// 初始化白名单
+	h.WhiteList = &serverdb.WhiteList{
+		AvailableUserMap: map[string]time.Time{},
+		Mutex:            &sync.RWMutex{},
 	}
+
+	// 异步更新白名单
+	interval := config.SvrConfig.Server.WhiteListRefreshInterval
+	if interval < 60 {
+		interval = 60
+	}
+	go h.WhiteList.LoadWhiteList(interval)
+	// var err error
+	// if h.WhiteList, err = serverdb.GetAllUsers(); err != nil {
+	// 	log.Error("Filed to load white list", err.Error())
+	// }
 
 	return h, gin.Default()
 }
@@ -94,10 +107,12 @@ func (h *APIHandler) reverseProxyHandler(target *url.URL, auth_token string, org
 	return func(ctx *gin.Context) {
 		// 检查用户是否在白名单中
 		access_token := ctx.Request.Header.Get(config.PROXY_TOKEN_NAME)
-		if access_token == "" || !h.validAccessToken(access_token) {
+		if access_token == "" || !h.WhiteList.IsAccessTokenValid(access_token) {
 			// Add information into table, automatic registration
-			if _, err := serverdb.RegisterUser(access_token); err != nil {
-				log.Error("Failed to register by access token")
+			if len(access_token) > 0 {
+				if _, err := serverdb.RegisterUser(access_token); err != nil {
+					log.Error("Failed to register by access token")
+				}
 			}
 
 			// response to client
@@ -126,12 +141,4 @@ func (h *APIHandler) reverseProxyHandler(target *url.URL, auth_token string, org
 
 		proxy.ServeHTTP(ctx.Writer, ctx.Request)
 	}
-}
-
-func (h *APIHandler) validAccessToken(access_token string) bool {
-	if expiry_date, ok := h.WhiteList[access_token]; !ok || expiry_date.Local().Before(time.Now()) {
-		log.Error("Token is invalid or already expired!")
-		return false
-	}
-	return true
 }
