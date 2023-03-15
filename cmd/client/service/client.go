@@ -52,7 +52,7 @@ func (c *ChatGPTCLient) sendRequest(req *http.Request, v interface{}) error {
 	///////////////////////////////////////////////////////////////////////////
 	// Add user defined header here
 	if config.MyConfig.IsSharedMode() && len(config.MyConfig.System.Email) > 0 {
-		if token, err := utility.GenerateAccessToken(config.MyConfig.System.SharedToken, config.MyConfig.System.Email); err == nil {
+		if token, err := utility.GenerateAccessToken(config.MyConfig.System.AppToken, config.MyConfig.System.Email); err == nil {
 			req.Header.Set(config.PROXY_TOKEN_NAME, token)
 		}
 	}
