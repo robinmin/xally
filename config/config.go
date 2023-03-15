@@ -14,23 +14,6 @@ const Version = "0.0.5"
 const MaxTokens = 4096
 const PROXY_TOKEN_NAME = "X-ALLY-TOKEN"
 
-// type T struct {
-// 	Delim Rune `yaml:"delim"`
-// }
-
-// type Rune rune
-
-// func (r *Rune) UnmarshalYAML(n *yaml.Node) error {
-// 	var s string
-// 	if err := n.Decode(&s); err != nil {
-// 		return err
-// 	}
-
-// 	rn, _ := utf8.DecodeRune([]byte(s))
-// 	*r = Rune(rn)
-// 	return nil
-// }
-
 type SysRole struct {
 	Name        string  `yaml:"name,omitempty"`
 	Avatar      string  `yaml:"avatar,omitempty"`
@@ -53,7 +36,7 @@ type SysSystem struct {
 
 	APIOrgIDOpenai string `yaml:"api_orgid_openai,omitempty"`
 	UseSharedMode  uint32 `yaml:"use_shared_mode,omitempty"`
-	SharedToken    string `yaml:"shared_token,omitempty"`
+	AppToken       string `yaml:"app_token,omitempty"`
 	Email          string `yaml:"email,omitempty"`
 }
 
@@ -80,7 +63,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 
 			APIOrgIDOpenai: "",
 			UseSharedMode:  0,
-			SharedToken:    "",
+			AppToken:       "",
 			Email:          "",
 		},
 		Roles: map[string]SysRole{
@@ -158,7 +141,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 }
 
 func (cfg *SysConfig) IsSharedMode() bool {
-	return cfg.System.UseSharedMode > 0 && len(cfg.System.SharedToken) > 0
+	return cfg.System.UseSharedMode > 0 && len(cfg.System.AppToken) > 0
 }
 
 func (cfg *SysConfig) DumpIntoYAML(cfg_file string) (string, error) {
