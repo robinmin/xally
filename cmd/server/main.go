@@ -82,8 +82,8 @@ func main() {
 
 	// 初始化gin框架
 	api, router := controller.NewAPIHandler(
-		config.SvrConfig.Server.APITokenSecret,
-		config.SvrConfig.Server.APITokenLifespan,
+		config.SvrConfig.Server.AppToken,
+		config.SvrConfig.Server.AppTokenLifespan,
 		config.SvrConfig.Server.DSN,
 		verbose,
 	)
