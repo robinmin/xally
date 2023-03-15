@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -9,17 +8,12 @@ import (
 	md "github.com/JohannesKaufmann/html-to-markdown"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/utility"
 )
 
-// const RX_FILE_NAME = "^[^\\\\/?%*:|\"<>]+(\\.[^\\\\/?%*:|\"<>]+)*$"
-// const RX_WEB_EMAIL = `^\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*$`
-// const RX_WEB_URL = `^http(s)://([\w-]+\.)+[\w-]+(/[\w-./?%&=]*)?$`
-// const RX_WEB_DOMAIN = `[a-zA-Z0-9][-a-zA-Z0-9]{0,62}(\.[a-zA-Z0-9][-a-zA-Z0-9]{0,62})+\.?`
-// const RX_WEB_MOBILE = `^(13[0-9]|14[01456879]|15[0-35-9]|16[2567]|17[0-8]|18[0-9]|19[0-35-9])\d{8}$`
-// const RX_WEB_CNID = `(^\d{15}$)|(^\d{18}$)|(^\d{17}(\d|X|x)$)`
-
-const PLUGIN_NAME_FILE = "file-content"
+const PLUGIN_NAME_FILE_CONTENT = "file-content"
+const PLUGIN_NAME_FILE_SUMMARY = "file-summary"
 const PLUGIN_NAME_WEB_CONTENT = "web-content"
 const PLUGIN_NAME_WEB_SUMMARY = "web-summary"
 
@@ -40,7 +34,8 @@ type PluginManager struct {
 
 func NewPluginManager() *PluginManager {
 	pm := &PluginManager{}
-	pm.AddPlugin(&FilePlugin{})
+	pm.AddPlugin(&FilePlugin{mode: PLUGIN_NAME_FILE_CONTENT})
+	pm.AddPlugin(&FilePlugin{mode: PLUGIN_NAME_FILE_SUMMARY})
 	pm.AddPlugin(&WebSummaryPlugin{mode: PLUGIN_NAME_WEB_CONTENT})
 	pm.AddPlugin(&WebSummaryPlugin{mode: PLUGIN_NAME_WEB_SUMMARY})
 
@@ -95,6 +90,7 @@ func (pm *PluginManager) Execute(original_msg string, arr_cmd []string) (process
 }
 
 type FilePlugin struct {
+	mode string
 	// rx_pattern *regexp.Regexp
 }
 
@@ -112,37 +108,44 @@ func (plugin *FilePlugin) Execute(original_msg string, arr_cmd []string) (proces
 	err = nil
 
 	if original_msg == "" {
-		return processed, "", nil, err
+		return
 	}
 
-	// if !plugin.rx_pattern.MatchString(original_msg) {
-	// 	return processed, "", nil, err
-	// }
-
 	var file_name string
-	if len(arr_cmd) > 0 && arr_cmd[0] == PLUGIN_NAME_FILE {
-		file_name = arr_cmd[0]
+	if len(arr_cmd) > 0 && (arr_cmd[0] == PLUGIN_NAME_FILE_CONTENT || arr_cmd[0] == PLUGIN_NAME_FILE_SUMMARY) {
+		file_name = strings.Join(arr_cmd[1:], " ")
 	} else {
 		file_name = original_msg
+	}
+	// if !plugin.rx_pattern.MatchString(original_msg) {
+	// 	return
+	// }
+
+	if file_name == "" {
+		return
 	}
 
 	if _, err = os.Stat(file_name); os.IsNotExist(err) {
 		log.Debug("It's not a file : ", file_name)
-		return processed, "", nil, err
+		return
 	}
 
 	var data []byte
 	if data, err = os.ReadFile(file_name); err != nil {
 		log.Error("Failed to read data from : ", file_name)
-		return processed, "", nil, err
+		return
 	}
 
 	replaced_msg = string(data)
-	replaced_cmd = append([]string{PLUGIN_NAME_FILE}, strings.Fields(replaced_msg)...)
+	replaced_cmd = append([]string{plugin.mode}, strings.Fields(replaced_msg)...)
+	if plugin.mode == PLUGIN_NAME_FILE_SUMMARY {
+		replaced_msg = config.Text("prompt_content_summary") + "\n-------------------------\n" + replaced_msg
+	}
+
 	// stop bubble up
 	processed = true
 
-	return processed, replaced_msg, replaced_cmd, err
+	return
 }
 
 type WebSummaryPlugin struct {
@@ -160,10 +163,11 @@ func (*WebSummaryPlugin) Close() error {
 
 func (plugin *WebSummaryPlugin) Execute(original_msg string, arr_cmd []string) (processed bool, replaced_msg string, replaced_cmd []string, err error) {
 	processed = false
+	replaced_msg = ""
 	err = nil
 
 	if original_msg == "" {
-		return processed, "", nil, err
+		return
 	}
 
 	// if !plugin.rx_pattern.MatchString(original_msg) {
@@ -171,13 +175,13 @@ func (plugin *WebSummaryPlugin) Execute(original_msg string, arr_cmd []string) (
 	// }
 
 	var url_str string
-	if len(arr_cmd) > 0 && arr_cmd[0] == PLUGIN_NAME_WEB_SUMMARY {
-		url_str = arr_cmd[0]
+	if len(arr_cmd) > 0 && (arr_cmd[0] == PLUGIN_NAME_WEB_CONTENT || arr_cmd[0] == PLUGIN_NAME_WEB_SUMMARY) {
+		url_str = strings.Join(arr_cmd[1:], " ")
 	} else {
 		url_str = original_msg
 	}
 	if _, err = url.Parse(url_str); err != nil {
-		return processed, "", nil, err
+		return
 	}
 
 	headers := map[string]string{}
@@ -185,28 +189,22 @@ func (plugin *WebSummaryPlugin) Execute(original_msg string, arr_cmd []string) (
 	statusCode, responseBody, err := utility.FetchURL("GET", url_str, payload, headers)
 	if err != nil || statusCode != 200 || responseBody == "" {
 		log.Error("Failed to fetch web page from : ", url_str)
-		return processed, "", nil, err
+		return
 	}
 
 	converter := md.NewConverter("", true, nil)
 	replaced_msg, err = converter.ConvertString(responseBody)
 	if err != nil {
 		log.Error("Failed to convert content in markdown")
-		return processed, "", nil, err
+		return
 	}
 
-	if plugin.mode == PLUGIN_NAME_WEB_CONTENT {
-		replaced_cmd = append([]string{PLUGIN_NAME_WEB_CONTENT}, strings.Fields(replaced_msg)...)
-	} else {
-		replaced_cmd = append([]string{PLUGIN_NAME_WEB_SUMMARY}, strings.Fields(replaced_msg)...)
-		replaced_msg = fmt.Sprintf(
-			"%s\n-------------------------\n%s",
-			"Can you help me extract key information based on the following and summarize them in bullet point form in my prefferd language as concisely as possible?",
-			replaced_msg,
-		)
+	replaced_cmd = append([]string{plugin.mode}, strings.Fields(replaced_msg)...)
+	if plugin.mode == PLUGIN_NAME_WEB_SUMMARY {
+		replaced_msg = config.Text("prompt_content_summary") + "\n-------------------------\n" + replaced_msg
 	}
 	// stop bubble up
 	processed = true
 
-	return processed, "", nil, err
+	return
 }
