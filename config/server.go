@@ -20,13 +20,14 @@ type ProxyRoute struct {
 }
 
 type ServerConfigItems struct {
-	DSN              string       `yaml:"DSN"`
-	OpenaiApiKey     string       `yaml:"openai_api_key"`
-	OpenaiOrgID      string       `yaml:"openai_org_id"`
-	APITokenSecret   string       `yaml:"api_token_secret"`
-	APITokenLifespan uint32       `yaml:"api_token_lifespan"`
-	ListenAddr       string       `yaml:"listen_addr"`
-	Routes           []ProxyRoute `yaml:"routes,omitempty"`
+	DSN                      string       `yaml:"DSN"`
+	OpenaiApiKey             string       `yaml:"openai_api_key"`
+	OpenaiOrgID              string       `yaml:"openai_org_id"`
+	AppToken                 string       `yaml:"app_token"`
+	AppTokenLifespan         uint32       `yaml:"app_token_lifespan"`
+	ListenAddr               string       `yaml:"listen_addr"`
+	WhiteListRefreshInterval int64        `yaml:"white_list_refresh_interval,omitempty"`
+	Routes                   []ProxyRoute `yaml:"routes,omitempty"`
 }
 
 type ServerConfig struct {
