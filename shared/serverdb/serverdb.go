@@ -3,6 +3,7 @@ package serverdb
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/robinmin/xally/config"
@@ -55,7 +56,7 @@ func (user *User) SaveUser() (int64, error) {
 }
 
 func extractUserInfo(access_token string) *User {
-	access_info, _ := utility.ExtractAccessInfo(config.SvrConfig.Server.APITokenSecret, access_token)
+	access_info, _ := utility.ExtractAccessInfo(config.SvrConfig.Server.AppToken, access_token)
 	if access_info == nil {
 		log.Error("Faield to extract access information from access token : " + access_token)
 		return nil
@@ -120,23 +121,6 @@ func GetUserByToken(access_token string) (*User, error) {
 	return &tmp_user, nil
 }
 
-func GetAllUsers() (map[string]time.Time, error) {
-	var valid_users []User
-	tx := DB.Where("status = 1 and expired_at > ?", time.Now()).Find(&valid_users)
-	if tx.Error != nil {
-		log.Error("Failed to get all token list ")
-		return nil, tx.Error
-	}
-
-	// update the user list
-	user_list := make(map[string]time.Time)
-	for _, tmp_user := range valid_users {
-		user_list[tmp_user.Token] = tmp_user.ExpiredAt
-	}
-
-	return user_list, nil
-}
-
 func ActiviateUser(access_token string) error {
 	tx := DB.Model(&User{}).Where("token = ?", access_token).Update("status", 1)
 	if tx.Error != nil {
@@ -153,4 +137,54 @@ func DeactiviateUser(access_token string) error {
 		return tx.Error
 	}
 	return nil
+}
+
+type WhiteList struct {
+	AvailableUserMap map[string]time.Time
+	Mutex            *sync.RWMutex
+}
+
+func (w *WhiteList) LoadWhiteList(interval int64) {
+	// 第一次立即更新白名单
+	w.updateAll()
+
+	// 定时更新白名单
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			w.updateAll()
+		}
+	}
+}
+
+func (w *WhiteList) updateAll() error {
+	// 从数据库获取最新数据
+	var valid_users []User
+	tx := DB.Where("status = 1 and expired_at > ?", time.Now()).Find(&valid_users)
+	if tx.Error != nil {
+		log.Error("Failed to get all token list ")
+		return tx.Error
+	}
+
+	// update the user list
+	user_list := make(map[string]time.Time)
+	for _, tmp_user := range valid_users {
+		user_list[tmp_user.Token] = tmp_user.ExpiredAt
+	}
+
+	// 加写锁，更新白名单
+	w.Mutex.Lock()
+	w.AvailableUserMap = user_list
+	w.Mutex.Unlock()
+
+	return nil
+}
+
+func (w *WhiteList) IsAccessTokenValid(access_token string) bool {
+	if expiry_date, ok := w.AvailableUserMap[access_token]; !ok || expiry_date.Local().Before(time.Now()) {
+		log.Error("Token is invalid or already expired!")
+		return false
+	}
+	return true
 }
