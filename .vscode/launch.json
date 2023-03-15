@@ -1,7 +1,18 @@
 {
     "version": "0.2.0",
     "configurations": [{
-        "name": "Local Debug",
+        "name": "Local Client",
+        "type": "go",
+        "request": "launch",
+        "mode": "debug",
+        // "program": "${workspaceFolder}/cmd/server",
+        "program": "${workspaceFolder}/cmd/client",
+        // "envFile": "${workspaceFolder}/.env",
+        "args": ["-v"],
+        "showLog": true,
+        "console": "integratedTerminal"
+    }, {
+        "name": "Local Server",
         "type": "go",
         "request": "launch",
         "mode": "debug",
