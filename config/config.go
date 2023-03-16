@@ -24,6 +24,7 @@ type SysRole struct {
 }
 
 type SysSystem struct {
+	SentryDSN         string `yaml:"sentry_dsn,omitempty"`
 	ChatHistoryPath   string `yaml:"chat_history_path,omitempty"`
 	LogPath           string `yaml:"log_path,omitempty"`
 	LogLevel          string `yaml:"log_level,omitempty"`
