@@ -2,7 +2,6 @@ package serverdb
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
@@ -21,7 +20,7 @@ func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 	var db_cfg *gorm.Config
 
 	if verbose {
-		fmt.Println("Opening database connection : ", connection_str)
+		// fmt.Println("Opening database connection : ", connection_str)
 		db_cfg = &gorm.Config{Logger: logger.Default.LogMode(logger.Info)}
 	} else {
 		db_cfg = &gorm.Config{}
