@@ -8,7 +8,6 @@ import (
 
 	"github.com/getsentry/sentry-go"
 	"github.com/google/uuid"
-	"github.com/robinmin/xally/config"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -63,8 +62,7 @@ func InitSentry(dsn string, is_client bool) error {
 
 	if is_client {
 		// get user id
-		current_user, err := user.Current()
-		if err == nil {
+		if current_user, err := user.Current(); err != nil {
 			log.Error("Failed to get current user information: %v", err.Error())
 		} else {
 			sentry.ConfigureScope(func(scope *sentry.Scope) {
@@ -102,7 +100,8 @@ func SetExtra(key string, value interface{}) {
 // RecoverPanic 恢复panic并发送到sentry
 func CloseSentry() {
 	// 兜底所有的异常监控与处理
-	if err := recover(); err != nil {
+	err := recover()
+	if _, ok := err.(error); err != nil && ok {
 		sentry.CurrentHub().Recover(err)
 
 		// 确保所有事件都被发送到Sentry
@@ -123,11 +122,6 @@ func CaptureRequest(r *http.Request) {
 
 // ReportCustomEvent 上报定制事件
 func ReportEvent(event_id UserDefinedEvent, eventMessage string, payLoad map[string]interface{}) {
-	if config.MyConfig.System.SentryDSN == "" {
-		// keep silient if not neeed it
-		return
-	}
-
 	needReport, meta := getEventConfig(event_id)
 	if needReport {
 		event := sentry.NewEvent()
