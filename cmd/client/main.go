@@ -89,7 +89,7 @@ func main() {
 			utility.InitSentry(config.MyConfig.System.SentryDSN, true)
 			defer utility.CloseSentry()
 
-			utility.ReportEvent(utility.EVT_SERVER_INIT, "Enter CLient", nil)
+			utility.ReportEvent(utility.EVT_SERVER_INIT, "Enter Client", nil)
 		}
 
 		bot := service.NewChatbot(
@@ -117,5 +117,7 @@ func main() {
 	}()
 
 	log.Debug("Quit System......")
-	utility.ReportEvent(utility.EVT_CLIENT_CLOSE, "Exit CLient", nil)
+	if len(config.MyConfig.System.SentryDSN) > 0 {
+		utility.ReportEvent(utility.EVT_CLIENT_CLOSE, "Exit CLient", nil)
+	}
 }
