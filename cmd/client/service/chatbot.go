@@ -269,8 +269,7 @@ func (bot *ChatBot) getExecutor(dir string) func(string) {
 		case "":
 			return
 		case "quit", "exit", "bye", "886", "88", "q":
-			bot.Close()
-			os.Exit(0)
+			bot.Close(true)
 		default:
 			commandFields := strings.Fields(cmds)
 			msg, need_dump, err := bot.CommandProcessor(cmds, commandFields)
@@ -328,8 +327,7 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 
 			question := original_msg[len(arr_cmd[0]):]
 			if need_quit := bot.Ask(question); need_quit {
-				bot.Close()
-				os.Exit(0)
+				bot.Close(true)
 			}
 		}
 	case PLUGIN_NAME_FILE_CONTENT:
@@ -344,8 +342,7 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
 			if need_quit := bot.Ask(original_msg); need_quit {
-				bot.Close()
-				os.Exit(0)
+				bot.Close(true)
 			}
 		}
 	case PLUGIN_NAME_WEB_CONTENT:
@@ -360,8 +357,7 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
 			if need_quit := bot.Ask(original_msg); need_quit {
-				bot.Close()
-				os.Exit(0)
+				bot.Close(true)
 			}
 		}
 	case "lookup":
@@ -419,8 +415,7 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 		// treat empty commands as ask chatGPT
 		if len(original_msg) > 1 {
 			if need_quit := bot.Ask(original_msg); need_quit {
-				bot.Close()
-				os.Exit(0)
+				bot.Close(true)
 			}
 		} else {
 			msg = config.Text("sys_not_enough_cmd")
@@ -475,7 +470,7 @@ func (bot *ChatBot) resetRole(role_name string, keep_silent bool) {
 	bot.initChatHistory(bot.chat_history_path, role_name)
 }
 
-func (bot *ChatBot) Close() {
+func (bot *ChatBot) Close(exit bool) {
 	bot.plugin_mgr.Close()
 
 	if bot.chat_history_file != nil {
@@ -484,6 +479,10 @@ func (bot *ChatBot) Close() {
 
 		bot.chat_history_file.Close()
 		bot.chat_history_file = nil
+	}
+
+	if exit {
+		os.Exit(0)
 	}
 }
 
@@ -533,11 +532,15 @@ func (bot *ChatBot) Ask(question string) bool {
 			token_len = bot.estimateAvailableTokenNumber(len(question))
 			break
 		} else {
-			fmt.Println("🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻 erasing old history......")
+			fmt.Print("🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻 erasing old history......")
 			// popup the old conversation history but key the prompt and the potential opening
+			size_before := len(bot.msg_history)
 			bot.msg_history = slices.Delete(bot.msg_history, init_msg_len, init_msg_len+1)
+			fmt.Printf("%d --> %d\n", size_before, len(bot.msg_history))
 		}
 	}
+
+	utility.ReportEvent(utility.EVT_CLIENT_ASK_CHATGPT, "Asking to chatGPT", nil)
 
 	resp, err := bot.client.CreateChatCompletion(
 		context.Background(),
@@ -552,7 +555,8 @@ func (bot *ChatBot) Ask(question string) bool {
 	)
 	elapsed := time.Since(start)
 	log.Info("Time cost for chatGPT API request : ", elapsed)
-	log.Debug(resp)
+	// log.Debug(resp)
+	utility.ReportEvent(utility.EVT_CLIENT_ANSWER_CHATGPT, "Answered from chatGPT", nil)
 
 	if err != nil {
 		bot.Say(err.Error(), true)
