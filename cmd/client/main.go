@@ -82,30 +82,40 @@ func main() {
 	// initialize log files
 	logger := utility.NewLog(config.MyConfig.System.LogPath, config.AppName, config.MyConfig.System.LogLevel)
 	defer logger.Close()
-	log.Debug("System initializing......")
+	log.Debug("Server system initializing......")
 
-	bot := service.NewChatbot(
-		config.MyConfig.System.ChatHistoryPath,
-		config.AppName,
-		role,
-		len(config.MyConfig.System.ChatHistoryPath) > 0,
-		verbose,
-	)
-	defer bot.Close()
+	func() {
+		if len(config.MyConfig.System.SentryDSN) > 0 {
+			utility.InitSentry(config.MyConfig.System.SentryDSN, true)
+			defer utility.CloseSentry()
 
-	if len(command) == 0 {
-		bot.Run()
-	} else {
-		commandFields := strings.Fields(command)
-		msg, need_dump, err := bot.CommandProcessor(command, commandFields)
-		if err != nil {
-			log.Error(err.Error())
+			utility.ReportEvent(utility.EVT_SERVER_INIT, "Enter CLient", nil)
+		}
+
+		bot := service.NewChatbot(
+			config.MyConfig.System.ChatHistoryPath,
+			config.AppName,
+			role,
+			len(config.MyConfig.System.ChatHistoryPath) > 0,
+			verbose,
+		)
+		defer bot.Close(true)
+
+		if len(command) == 0 {
+			bot.Run()
 		} else {
-			if len(msg) > 0 {
-				bot.Say(msg, need_dump)
+			commandFields := strings.Fields(command)
+			msg, need_dump, err := bot.CommandProcessor(command, commandFields)
+			if err != nil {
+				log.Error(err.Error())
+			} else {
+				if len(msg) > 0 {
+					bot.Say(msg, need_dump)
+				}
 			}
 		}
-	}
+	}()
 
 	log.Debug("Quit System......")
+	utility.ReportEvent(utility.EVT_CLIENT_CLOSE, "Exit CLient", nil)
 }
