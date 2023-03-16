@@ -17,7 +17,6 @@ import (
 	"github.com/robinmin/xally/cmd/server/controller"
 	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/utility"
-	// "github.com/robinmin/xally/shared/serverdb"
 )
 
 /******************************************************************************
@@ -80,6 +79,13 @@ func main() {
 	// 禁用控制台颜色，将日志写入文件时不需要控制台颜色。
 	// gin.DisableConsoleColor()
 
+	if len(config.SvrConfig.Server.SentryDSN) > 0 {
+		utility.InitSentry(config.SvrConfig.Server.SentryDSN, false)
+		defer utility.CloseSentry()
+
+		utility.ReportEvent(utility.EVT_SERVER_INIT, "Enter Server", nil)
+	}
+
 	// 初始化gin框架
 	api, router := controller.NewAPIHandler(
 		config.SvrConfig.Server.AppToken,
@@ -122,4 +128,7 @@ func main() {
 	}
 
 	log.Info("Server exiting......")
+	if len(config.SvrConfig.Server.SentryDSN) > 0 {
+		utility.ReportEvent(utility.EVT_SERVER_CLOSE, "Exit Server", nil)
+	}
 }
