@@ -21,6 +21,7 @@ type ProxyRoute struct {
 
 type ServerConfigItems struct {
 	DSN                      string       `yaml:"DSN"`
+	SentryDSN                string       `yaml:"sentry_dsn,omitempty"`
 	OpenaiApiKey             string       `yaml:"openai_api_key"`
 	OpenaiOrgID              string       `yaml:"openai_org_id"`
 	AppToken                 string       `yaml:"app_token"`
