@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
@@ -20,6 +21,7 @@ import (
 
 	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/clientdb"
+	"github.com/robinmin/xally/shared/model"
 	"github.com/robinmin/xally/shared/utility"
 )
 
@@ -518,7 +520,7 @@ func (bot *ChatBot) Ask(question string) bool {
 		init_msg_len = 1
 	}
 
-	// adjust max token length
+	// adjust available max token length
 	for {
 		token_len = bot.estimateAvailableTokenNumber(question_len)
 		if token_len > 0 {
@@ -542,17 +544,30 @@ func (bot *ChatBot) Ask(question string) bool {
 
 	utility.ReportEvent(utility.EVT_CLIENT_ASK_CHATGPT, "Asking to chatGPT", nil)
 
-	resp, err := bot.client.CreateChatCompletion(
-		context.Background(),
-		gpt3.ChatCompletionRequest{
-			Model:     gpt3.GPT3Dot5Turbo,
-			Messages:  bot.msg_history,
-			MaxTokens: token_len,
-			// MaxTokens:   3000,
-			Temperature: bot.role.Temperature,
-			N:           1,
-		},
-	)
+	rqst := gpt3.ChatCompletionRequest{
+		Model:     gpt3.GPT3Dot5Turbo,
+		Messages:  bot.msg_history,
+		MaxTokens: token_len,
+		// MaxTokens:   3000,
+		Temperature: bot.role.Temperature,
+		N:           1,
+	}
+	resp, err := bot.client.CreateChatCompletion(context.Background(), rqst)
+
+	// add chat history
+	var username string
+	if current_user, err := user.Current(); err == nil {
+		username = current_user.Username
+	} else {
+		username = ""
+	}
+	chat_history := model.ConversationHistory{}
+	chat_history.LoadRequest(bot.role.Name, username, &rqst)
+	chat_history.LoadResponse(&resp)
+	if !bot.clientdb.AddChatHistory(&chat_history) {
+		log.Error("Failed to write chat history into local database.")
+	}
+
 	elapsed := time.Since(start)
 	log.Info("Time cost for chatGPT API request : ", elapsed)
 	// log.Debug(resp)
@@ -574,12 +589,14 @@ func (bot *ChatBot) Ask(question string) bool {
 
 		gray := color.New(color.FgHiBlack).PrintfFunc()
 		gray(
-			"%60s ( %d + %d = %d ) %ds \n\n",
+			"%40s ( %d + %d = %d ) %ds       %s : %d\n\n",
 			strftime.Format(time.Now(), "%Y-%m-%d %H:%M:%S"),
 			bot.token_counter_prompt,
 			bot.token_counter_completion,
 			bot.token_counter_total,
 			elapsed/100000000,
+			strings.Repeat("░", len(bot.msg_history)),
+			bot.estimateAvailableTokenNumber(question_len),
 		)
 		bot.updateHistory("assistant", message)
 
@@ -590,7 +607,7 @@ func (bot *ChatBot) Ask(question string) bool {
 }
 
 func (bot *ChatBot) estimateAvailableTokenNumber(question_leng int) int {
-	available_len := config.MaxTokens - bot.token_counter_total - question_leng
+	available_len := config.MaxTokens - question_leng // - bot.token_counter_total
 
 	for _, msg := range bot.msg_history {
 		available_len = available_len - 4 // every message follows <im_start>{role/name}\n{content}<im_end>\n
