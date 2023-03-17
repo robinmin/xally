@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/robinmin/xally/config"
+	// "github.com/robinmin/xally/shared/model"
 	"github.com/robinmin/xally/shared/utility"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
@@ -37,7 +38,7 @@ func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 	if err != nil {
 		log.Error("Failed to connect to database: ", err.Error())
 	} else {
-		if err = DB.AutoMigrate(&User{}); err != nil {
+		if err = DB.AutoMigrate(&User{} /*, &model.ConversationHistory{}*/); err != nil {
 			log.Error(err)
 		}
 		// log.Debug("TODO: migrate")
