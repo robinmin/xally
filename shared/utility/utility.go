@@ -223,12 +223,9 @@ func Lookup(text string, lang string) (string, error) {
 }
 
 func FetchURL(verb string, url string, payload string, headers map[string]string) (int, string, error) {
-	resp_code := http.StatusOK
+	resp_code := http.StatusRequestTimeout
 	msg := ""
 	resp_body := ""
-
-	// 创建HTTP客户端
-	client := &http.Client{}
 
 	// 创建HTTP请求
 	req, err := http.NewRequest(verb, url, bytes.NewBuffer([]byte(payload)))
@@ -245,9 +242,15 @@ func FetchURL(verb string, url string, payload string, headers map[string]string
 		}
 	}
 
-	// 发送HTTP请求
+	// 创建HTTP客户端
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
 	resp, err := client.Do(req)
-	if err != nil {
+	if resp != nil {
+		resp_code = resp.StatusCode
+	}
+	if err != nil || resp == nil {
 		msg = fmt.Sprintf("failed to send HTTP request: %v", err.Error())
 		log.Error(msg)
 		return resp_code, resp_body, err
@@ -256,22 +259,69 @@ func FetchURL(verb string, url string, payload string, headers map[string]string
 
 	resp_code = resp.StatusCode
 	if resp.StatusCode == http.StatusOK {
-		// 读取响应体
-		bodyBytes, err1 := io.ReadAll(resp.Body)
-		if err1 == nil {
-			resp_body = string(bodyBytes)
-		} else {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
 			msg = fmt.Sprintf("failed to read response body: %v", err.Error())
 			log.Error(msg)
+		} else {
+			resp_body = string(bodyBytes)
 		}
-	} else {
-		msg = fmt.Sprintf("Invalid response code : : %v", resp.StatusCode)
-		log.Error(msg)
-		err = errors.New(msg)
 	}
 
 	// 返回响应状态码、响应体和错误信息
-	return resp_code, resp_body, nil
+	return resp_code, resp_body, err
+}
+
+func FetchURLWithRetry(verb string, url string, payload string, headers map[string]string, retries int, retryInterval time.Duration) (int, string, error) {
+	resp_code := http.StatusRequestTimeout
+	msg := ""
+	resp_body := ""
+
+	// 创建HTTP请求
+	req, err := http.NewRequest(verb, url, bytes.NewBuffer([]byte(payload)))
+	if err != nil {
+		msg = fmt.Sprintf("failed to create HTTP request: %v", err.Error())
+		log.Error(msg)
+		return resp_code, resp_body, err
+	}
+
+	// 设置HTTP请求头
+	if headers != nil && len(headers) > 0 {
+		for key, value := range headers {
+			req.Header.Set(key, value)
+		}
+	}
+
+	// 创建HTTP客户端
+	client := &http.Client{
+		Timeout: retryInterval * time.Second,
+	}
+
+	var resp *http.Response
+	for i := 0; i < retries; i++ {
+		resp, err = client.Do(req)
+		if resp != nil {
+			resp_code = resp.StatusCode
+		}
+		if err == nil && resp.StatusCode == http.StatusOK {
+			defer resp.Body.Close()
+
+			bodyBytes, err := io.ReadAll(resp.Body)
+			if err != nil {
+				msg = fmt.Sprintf("failed to read response body: %v", err.Error())
+				log.Error(msg)
+			} else {
+				resp_body = string(bodyBytes)
+				// 返回响应状态码、响应体和错误信息
+				return resp_code, resp_body, nil
+			}
+		}
+		time.Sleep(retryInterval)
+	}
+	if err != nil {
+		return resp_code, "", err
+	}
+	return resp_code, "", fmt.Errorf("failed to load URL %s after %d retries: status code %d", url, retries, resp.StatusCode)
 }
 
 func GenerateAccessToken(app_key string, email string) (string, error) {
