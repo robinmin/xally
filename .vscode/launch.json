@@ -5,9 +5,8 @@
         "type": "go",
         "request": "launch",
         "mode": "debug",
-        // "program": "${workspaceFolder}/cmd/server",
         "program": "${workspaceFolder}/cmd/client",
-        // "envFile": "${workspaceFolder}/.env",
+        "envFile": "${workspaceFolder}/.env",
         "args": ["-v"],
         "showLog": true,
         "console": "integratedTerminal"
@@ -17,8 +16,7 @@
         "request": "launch",
         "mode": "debug",
         "program": "${workspaceFolder}/cmd/server",
-        // "program": "${workspaceFolder}/cmd/client",
-        // "envFile": "${workspaceFolder}/.env",
+        "envFile": "${workspaceFolder}/.env",
         "args": ["-v"],
         "showLog": true,
         "console": "integratedTerminal"
