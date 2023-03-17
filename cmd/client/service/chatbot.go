@@ -77,10 +77,16 @@ func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
 		Web: {
 			{Text: PLUGIN_NAME_WEB_CONTENT, Description: config.Text("tips_suggestion_web_content")},
 			{Text: PLUGIN_NAME_WEB_SUMMARY, Description: config.Text("tips_suggestion_web_summary")},
+			{Text: PLUGIN_NAME_WEB_TRANSLATE_CN, Description: config.Text("tips_suggestion_web_translate_cn")},
+			{Text: PLUGIN_NAME_WEB_TRANSLATE_EN, Description: config.Text("tips_suggestion_web_translate_en")},
+			{Text: PLUGIN_NAME_WEB_TRANSLATE_JP, Description: config.Text("tips_suggestion_web_translate_jp")},
 		},
 		File: {
 			{Text: PLUGIN_NAME_FILE_CONTENT, Description: config.Text("tips_suggestion_file_content")},
 			{Text: PLUGIN_NAME_FILE_SUMMARY, Description: config.Text("tips_suggestion_file_summary")},
+			{Text: PLUGIN_NAME_FILE_TRANSLATE_CN, Description: config.Text("tips_suggestion_file_translate_cn")},
+			{Text: PLUGIN_NAME_FILE_TRANSLATE_EN, Description: config.Text("tips_suggestion_file_translate_en")},
+			{Text: PLUGIN_NAME_FILE_TRANSLATE_JP, Description: config.Text("tips_suggestion_file_translate_jp")},
 		},
 		Cmd: {
 			{Text: "cmd", Description: config.Text("tips_suggestion_cmd")},
@@ -304,14 +310,22 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 	}
 
 	// switch to plugin manager to translate the command and content
-	if tmp_processed, tmp_replaced_msg, tmp_replaced_cmd, tmp_err := bot.plugin_mgr.Execute(original_msg, arr_cmd); tmp_err == nil && tmp_processed {
-		original_msg = tmp_replaced_msg
-		arr_cmd = tmp_replaced_cmd
+	tmp_processed, tmp_replaced_msg, tmp_replaced_cmd, tmp_err := bot.plugin_mgr.Execute(original_msg, arr_cmd)
+	if tmp_processed {
+		if tmp_err == nil {
+			original_msg = tmp_replaced_msg
+			arr_cmd = tmp_replaced_cmd
+		} else {
+			msg = "[ERROR]" + tmp_err.Error()
+			bot.Say("[ERROR]"+tmp_err.Error(), true)
+			return msg, need_dump, tmp_err
+		}
 	}
 
 	if arr_cmd == nil || len(arr_cmd) <= 0 {
 		return msg, need_dump, errors.New("Invalid updated parameters for commandProcessor")
 	}
+
 	switch arr_cmd[0] {
 	case "reset":
 		log.Debug("Execute [reset] command on : ", original_msg)
@@ -332,6 +346,7 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 				bot.Close(true)
 			}
 		}
+
 	case PLUGIN_NAME_FILE_CONTENT:
 		if len(original_msg) > len(arr_cmd[0]) {
 			log.Debug("Execute [file-content] command on : ", original_msg)
@@ -339,14 +354,21 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
 		}
 	case PLUGIN_NAME_FILE_SUMMARY:
+		fallthrough
+	case PLUGIN_NAME_FILE_TRANSLATE_CN:
+		fallthrough
+	case PLUGIN_NAME_FILE_TRANSLATE_EN:
+		fallthrough
+	case PLUGIN_NAME_FILE_TRANSLATE_JP:
 		if len(original_msg) > len(arr_cmd[0]) {
-			log.Debug("Execute [file-summary] command on : ", original_msg)
+			log.Debug("Execute [%s] command on : ", arr_cmd[0], original_msg)
 
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
 			if need_quit := bot.Ask(original_msg); need_quit {
 				bot.Close(true)
 			}
 		}
+
 	case PLUGIN_NAME_WEB_CONTENT:
 		if len(original_msg) > len(arr_cmd[0]) {
 			log.Debug("Execute [web-content] command on : ", original_msg)
@@ -354,14 +376,21 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
 		}
 	case PLUGIN_NAME_WEB_SUMMARY:
+		fallthrough
+	case PLUGIN_NAME_WEB_TRANSLATE_CN:
+		fallthrough
+	case PLUGIN_NAME_WEB_TRANSLATE_EN:
+		fallthrough
+	case PLUGIN_NAME_WEB_TRANSLATE_JP:
 		if len(original_msg) > len(arr_cmd[0]) {
-			log.Debug("Execute [web-summary] command on : ", original_msg)
+			log.Debug("Execute [%] command on : ", arr_cmd[0], original_msg)
 
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
 			if need_quit := bot.Ask(original_msg); need_quit {
 				bot.Close(true)
 			}
 		}
+
 	case "lookup":
 		log.Debug("Execute [lookup] command on : ", original_msg)
 
