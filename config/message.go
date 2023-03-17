@@ -56,7 +56,7 @@ Hello, I am your personal assistant %s, how can I help you?  [ %s ]
 	"tips_suggestion_translate":    "Use DeepL to translate or look up the dictionary",
 	"tips_changed_role":            "Switched to %s%s, my prompt : \n%s",
 
-	"prompt_content_summary": "Please extract key information based on the following content and summarize them in bullet points as concisely as possible?",
+	"prompt_content_summary": "Please make a summary of the following content and list each of its main points into bullet points as concisely as possible. If possible give a one-sentence comment.",
 }
 
 var i18n_str_table_jp = map[string]string{
@@ -86,5 +86,5 @@ var i18n_str_table_jp = map[string]string{
 	"tips_suggestion_translate":    "DeepLで翻訳する、または辞書を調べて",
 	"tips_changed_role":            "%s%sに切り替えました、私のプロンプトワードは : \n%s",
 
-	"prompt_content_summary": "Please extract key information based on the following content and summarize them in bullet points as concisely as possible?",
+	"prompt_content_summary": "以下の内容を要約し、それぞれの要点をできるだけ簡潔に箇条書きにしてください。可能であれば、1文のコメントを添えてください",
 }
