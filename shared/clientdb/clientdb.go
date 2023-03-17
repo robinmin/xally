@@ -1,6 +1,7 @@
 package clientdb
 
 import (
+	"github.com/robinmin/xally/shared/model"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -26,7 +27,7 @@ func InitClientDB(db_name string, verbose bool) (*ClientDB, error) {
 	if err != nil {
 		log.Error("Failed to open DB plugin: ", db_name, err)
 	} else {
-		if err = cdb.db.AutoMigrate(&OptionHistory{}); err != nil {
+		if err = cdb.db.AutoMigrate(&OptionHistory{}, &model.ConversationHistory{}); err != nil {
 			log.Error(err)
 		}
 	}
@@ -46,10 +47,21 @@ func (cdb *ClientDB) LoadOptionHistory(role_name string) ([]string, error) {
 
 func (cdb *ClientDB) AddOptionHistory(op_history *OptionHistory) bool {
 	if op_history != nil {
-		if len(op_history.Option) > 256 {
-			op_history.Option = op_history.Option[0:256]
-		}
+		op_history.Option = model.TruncateStr(op_history.Option, 256)
 		tx := cdb.db.Create(op_history)
+		if tx.Error != nil {
+			log.Error("Failed to add new option history")
+			log.Error(tx.Error)
+		} else {
+			return true
+		}
+	}
+	return false
+}
+
+func (cdb *ClientDB) AddChatHistory(chat_history *model.ConversationHistory) bool {
+	if chat_history != nil {
+		tx := cdb.db.Create(chat_history)
 		if tx.Error != nil {
 			log.Error("Failed to add new option history")
 			log.Error(tx.Error)
