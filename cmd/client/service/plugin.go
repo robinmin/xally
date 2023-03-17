@@ -3,6 +3,7 @@ package service
 import (
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
 
 	md "github.com/JohannesKaufmann/html-to-markdown"
@@ -14,8 +15,15 @@ import (
 
 const PLUGIN_NAME_FILE_CONTENT = "file-content"
 const PLUGIN_NAME_FILE_SUMMARY = "file-summary"
+const PLUGIN_NAME_FILE_TRANSLATE_CN = "file-translate-cn"
+const PLUGIN_NAME_FILE_TRANSLATE_EN = "file-translate-en"
+const PLUGIN_NAME_FILE_TRANSLATE_JP = "file-translate-jp"
+
 const PLUGIN_NAME_WEB_CONTENT = "web-content"
 const PLUGIN_NAME_WEB_SUMMARY = "web-summary"
+const PLUGIN_NAME_WEB_TRANSLATE_CN = "web-translate-cn"
+const PLUGIN_NAME_WEB_TRANSLATE_EN = "web-translate-en"
+const PLUGIN_NAME_WEB_TRANSLATE_JP = "web-translate-jp"
 
 type Plugin interface {
 	// GetName() string
@@ -36,8 +44,15 @@ func NewPluginManager() *PluginManager {
 	pm := &PluginManager{}
 	pm.AddPlugin(&FilePlugin{mode: PLUGIN_NAME_FILE_CONTENT})
 	pm.AddPlugin(&FilePlugin{mode: PLUGIN_NAME_FILE_SUMMARY})
+	pm.AddPlugin(&FilePlugin{mode: PLUGIN_NAME_FILE_TRANSLATE_CN})
+	pm.AddPlugin(&FilePlugin{mode: PLUGIN_NAME_FILE_TRANSLATE_EN})
+	pm.AddPlugin(&FilePlugin{mode: PLUGIN_NAME_FILE_TRANSLATE_JP})
+
 	pm.AddPlugin(&WebSummaryPlugin{mode: PLUGIN_NAME_WEB_CONTENT})
 	pm.AddPlugin(&WebSummaryPlugin{mode: PLUGIN_NAME_WEB_SUMMARY})
+	pm.AddPlugin(&WebSummaryPlugin{mode: PLUGIN_NAME_WEB_TRANSLATE_CN})
+	pm.AddPlugin(&WebSummaryPlugin{mode: PLUGIN_NAME_WEB_TRANSLATE_EN})
+	pm.AddPlugin(&WebSummaryPlugin{mode: PLUGIN_NAME_WEB_TRANSLATE_JP})
 
 	return pm
 }
@@ -77,13 +92,13 @@ func (pm *PluginManager) Close() error {
 func (pm *PluginManager) Execute(original_msg string, arr_cmd []string) (processed bool, replaced_msg string, replaced_cmd []string, err error) {
 	processed = false
 	for _, p := range pm.plugins {
-		if tmp_processed, tmp_replaced_msg, tmp_replaced_cmd, tmp_err := p.Execute(original_msg, arr_cmd); tmp_err != nil {
+		tmp_processed, tmp_replaced_msg, tmp_replaced_cmd, tmp_err := p.Execute(original_msg, arr_cmd)
+		if tmp_err != nil {
 			log.Error(tmp_err)
-		} else {
-			if tmp_processed {
-				processed = true
-				return processed, tmp_replaced_msg, tmp_replaced_cmd, tmp_err
-			}
+		}
+		if tmp_processed {
+			processed = true
+			return processed, tmp_replaced_msg, tmp_replaced_cmd, tmp_err
 		}
 	}
 	return processed, "", nil, nil
@@ -112,18 +127,21 @@ func (plugin *FilePlugin) Execute(original_msg string, arr_cmd []string) (proces
 	}
 
 	var file_name string
-	if len(arr_cmd) > 0 && (arr_cmd[0] == PLUGIN_NAME_FILE_CONTENT || arr_cmd[0] == PLUGIN_NAME_FILE_SUMMARY) {
+	var current_mode string
+	if len(arr_cmd) > 0 {
 		file_name = strings.Join(arr_cmd[1:], " ")
+		current_mode = arr_cmd[0]
 	} else {
 		file_name = original_msg
+		current_mode = PLUGIN_NAME_FILE_CONTENT
 	}
-	// if !plugin.rx_pattern.MatchString(original_msg) {
-	// 	return
-	// }
 
-	if file_name == "" {
+	// ignore invalid input or skip the other modes
+	if file_name == "" || plugin.mode != current_mode {
 		return
 	}
+	// stop bubble up
+	processed = true
 
 	if _, err = os.Stat(file_name); os.IsNotExist(err) {
 		log.Debug("It's not a file : ", file_name)
@@ -135,15 +153,27 @@ func (plugin *FilePlugin) Execute(original_msg string, arr_cmd []string) (proces
 		log.Error("Failed to read data from : ", file_name)
 		return
 	}
+	if len(data) <= 0 {
+		log.Info("Blank file ", file_name)
+		return
+	}
 
 	replaced_msg = string(data)
 	replaced_cmd = append([]string{plugin.mode}, strings.Fields(replaced_msg)...)
-	if plugin.mode == PLUGIN_NAME_FILE_SUMMARY {
-		replaced_msg = config.Text("prompt_content_summary") + "\n-------------------------\n" + replaced_msg
+	var prompt_msg string
+	switch current_mode {
+	case PLUGIN_NAME_FILE_SUMMARY:
+		prompt_msg = config.Text("prompt_content_summary")
+	case PLUGIN_NAME_FILE_TRANSLATE_CN:
+		prompt_msg = config.Text("prompt_translate_cn")
+	case PLUGIN_NAME_FILE_TRANSLATE_EN:
+		prompt_msg = config.Text("prompt_translate_en")
+	case PLUGIN_NAME_FILE_TRANSLATE_JP:
+		prompt_msg = config.Text("prompt_translate_jp")
 	}
-
-	// stop bubble up
-	processed = true
+	if len(prompt_msg) > 0 {
+		replaced_msg = prompt_msg + "\n\n-------------------------\n" + replaced_msg
+	}
 
 	return
 }
@@ -170,27 +200,32 @@ func (plugin *WebSummaryPlugin) Execute(original_msg string, arr_cmd []string) (
 		return
 	}
 
-	// if !plugin.rx_pattern.MatchString(original_msg) {
-	// 	return processed, "", nil, err
-	// }
-
 	var url_str string
-	if len(arr_cmd) > 0 && (arr_cmd[0] == PLUGIN_NAME_WEB_CONTENT || arr_cmd[0] == PLUGIN_NAME_WEB_SUMMARY) {
+	var current_mode string
+	if len(arr_cmd) > 0 {
 		url_str = strings.Join(arr_cmd[1:], " ")
+		current_mode = arr_cmd[0]
 	} else {
 		url_str = original_msg
+		current_mode = PLUGIN_NAME_WEB_CONTENT
 	}
-	if _, err = url.Parse(url_str); err != nil {
+	if _, err = url.Parse(url_str); err != nil || plugin.mode != current_mode {
 		return
 	}
+	// stop bubble up
+	processed = true
 
 	headers := map[string]string{}
 	payload := ""
-	statusCode, responseBody, err := utility.FetchURL("GET", url_str, payload, headers)
+	statusCode, responseBody, err := utility.FetchURLWithRetry("GET", url_str, payload, headers, 3, 5)
 	if err != nil || statusCode != 200 || responseBody == "" {
 		log.Error("Failed to fetch web page from : ", url_str)
 		return
 	}
+
+	// try to remove hyper-links
+	re := regexp.MustCompile(`<a href=['"](.*?)['"]>(.*?)</a>`)
+	responseBody = re.ReplaceAllString(responseBody, "$2")
 
 	converter := md.NewConverter("", true, nil)
 	replaced_msg, err = converter.ConvertString(responseBody)
@@ -200,11 +235,20 @@ func (plugin *WebSummaryPlugin) Execute(original_msg string, arr_cmd []string) (
 	}
 
 	replaced_cmd = append([]string{plugin.mode}, strings.Fields(replaced_msg)...)
-	if plugin.mode == PLUGIN_NAME_WEB_SUMMARY {
-		replaced_msg = config.Text("prompt_content_summary") + "\n-------------------------\n" + replaced_msg
+	var prompt_msg string
+	switch plugin.mode {
+	case PLUGIN_NAME_WEB_SUMMARY:
+		prompt_msg = config.Text("prompt_content_summary")
+	case PLUGIN_NAME_WEB_TRANSLATE_CN:
+		prompt_msg = config.Text("prompt_translate_cn")
+	case PLUGIN_NAME_WEB_TRANSLATE_EN:
+		prompt_msg = config.Text("prompt_translate_en")
+	case PLUGIN_NAME_WEB_TRANSLATE_JP:
+		prompt_msg = config.Text("prompt_translate_jp")
 	}
-	// stop bubble up
-	processed = true
+	if len(prompt_msg) > 0 {
+		replaced_msg = prompt_msg + "\n-------------------------\n" + replaced_msg
+	}
 
 	return
 }
