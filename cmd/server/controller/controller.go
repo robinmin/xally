@@ -88,6 +88,15 @@ func (h *APIHandler) RegisterRoutes(router *gin.Engine, routes *[]config.ProxyRo
 	// set default processer
 	router.NoRoute(h.noRouteHandler())
 	router.NoMethod(h.noMethodHandler())
+	router.GET("/user/activiate/:token", func(ctx *gin.Context) {
+		token := ctx.Param("token")
+		ctx.Writer.WriteHeader(http.StatusOK)
+		ctx.Writer.Write([]byte(config.GetPageActiviate("/user/activiated/" + token)))
+	})
+	router.GET("/user/activiated/:token", func(ctx *gin.Context) {
+		ctx.Writer.WriteHeader(http.StatusOK)
+		ctx.Writer.Write([]byte(config.GetPageActiviated()))
+	})
 
 	for _, rt := range *routes {
 		// Just logging the mapping.
