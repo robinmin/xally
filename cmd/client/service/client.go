@@ -59,8 +59,6 @@ func (c *ChatGPTCLient) sendRequest(req *http.Request, v interface{}) error {
 	///////////////////////////////////////////////////////////////////////////
 
 	req.Header.Set("Accept", "application/json; charset=utf-8")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.MyConfig.System.APIKeyOpenai))
-
 	// Check whether Content-Type is already set, Upload Files API requires
 	// Content-Type == multipart/form-data
 	contentType := req.Header.Get("Content-Type")
@@ -68,8 +66,9 @@ func (c *ChatGPTCLient) sendRequest(req *http.Request, v interface{}) error {
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
 	}
 
-	if len(config.MyConfig.System.APIOrgIDOpenai) > 0 {
-		req.Header.Set("OpenAI-Organization", config.MyConfig.System.APIOrgIDOpenai)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.MyConfig.System.OpenaiApiKey))
+	if len(config.MyConfig.System.OpenaiOrgID) > 0 {
+		req.Header.Set("OpenAI-Organization", config.MyConfig.System.OpenaiOrgID)
 	}
 
 	res, err := c.HTTPClient.Do(req)
