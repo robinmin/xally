@@ -1,10 +1,14 @@
 package clientdb
 
 import (
+	"fmt"
+
+	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/model"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type ClientDB struct {
@@ -15,12 +19,16 @@ func InitClientDB(db_name string, verbose bool) (*ClientDB, error) {
 	var err error
 	var db_cfg *gorm.Config
 
-	// if verbose {
-	// 	fmt.Println("Opening database : ", db_name)
-	// 	db_cfg = &gorm.Config{Logger: logger.Default.LogMode(logger.Info)}
-	// } else {
-	db_cfg = &gorm.Config{}
-	// }
+	if verbose {
+		fmt.Println("Opening database : ", db_name)
+		if config.DebugMode {
+			db_cfg = &gorm.Config{Logger: logger.Default.LogMode(logger.Info)}
+		} else {
+			db_cfg = &gorm.Config{}
+		}
+	} else {
+		db_cfg = &gorm.Config{}
+	}
 
 	cdb := &ClientDB{}
 	cdb.db, err = gorm.Open(sqlite.Open(db_name), db_cfg)
