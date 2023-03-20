@@ -33,13 +33,15 @@ type SysSystem struct {
 	DefaultRole       string `yaml:"default_role,omitempty"`
 	APIEndpointOpenai string `yaml:"api_endpoint_openai,omitempty"`
 	APIEndpointDeepl  string `yaml:"api_endpoint_deepl,omitempty"`
-	APIKeyOpenai      string `yaml:"api_key_openai,omitempty"`
-	APIKeyDeepl       string `yaml:"api_key_deepl,omitempty"`
+	// APIKeyOpenai      string `yaml:"api_key_openai,omitempty"`
+	OpenaiApiKey string `yaml:"openai_api_key"`
+	OpenaiOrgID  string `yaml:"openai_org_id"`
+	DeeplApiKey  string `yaml:"deepl_api_key,omitempty"`
 
-	APIOrgIDOpenai string `yaml:"api_orgid_openai,omitempty"`
-	UseSharedMode  uint32 `yaml:"use_shared_mode,omitempty"`
-	AppToken       string `yaml:"app_token,omitempty"`
-	Email          string `yaml:"email,omitempty"`
+	// APIOrgIDOpenai string `yaml:"api_orgid_openai,omitempty"`
+	UseSharedMode uint32 `yaml:"use_shared_mode,omitempty"`
+	AppToken      string `yaml:"app_token,omitempty"`
+	Email         string `yaml:"email,omitempty"`
 }
 
 type SysConfig struct {
@@ -53,6 +55,7 @@ var MyConfig *SysConfig
 func NewSysConfig(cfg_file string) *SysConfig {
 	cfg := &SysConfig{
 		System: SysSystem{
+			SentryDSN:         "",
 			ChatHistoryPath:   path.Dir(cfg_file),
 			LogPath:           "logs",
 			LogLevel:          "info",
@@ -60,13 +63,14 @@ func NewSysConfig(cfg_file string) *SysConfig {
 			DefaultRole:       "fullstack",
 			APIEndpointOpenai: "https://api.openai.com/v1",
 			APIEndpointDeepl:  "https://api-free.deepl.com/v2",
-			APIKeyOpenai:      "",
-			APIKeyDeepl:       "",
+			OpenaiApiKey:      "",
+			OpenaiOrgID:       "",
+			DeeplApiKey:       "",
 
-			APIOrgIDOpenai: "",
-			UseSharedMode:  0,
-			AppToken:       "",
-			Email:          "",
+			// APIOrgIDOpenai: "",
+			UseSharedMode: 0,
+			AppToken:      "",
+			Email:         "",
 		},
 		Roles: map[string]SysRole{
 			"expert": {
