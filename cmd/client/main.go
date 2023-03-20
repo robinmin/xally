@@ -39,7 +39,7 @@ func init() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, `xally version: xally/%s
-Usage: xally [-hv] [-f config_file] [-c command] [-r role] [-d history_path] [-p language_preference]
+Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:
 `, config.Version)
