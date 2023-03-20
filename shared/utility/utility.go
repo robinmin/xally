@@ -101,7 +101,7 @@ func Translate(text string, lang string) (string, error) {
 	msg := ""
 
 	// 设置DeepL API的URL和API密钥
-	api_key := config.MyConfig.System.APIKeyDeepl
+	api_key := config.MyConfig.System.DeeplApiKey
 	if api_key == "" {
 		api_key = os.Getenv("DEEPL_API_KEY")
 		if api_key == "" {
@@ -159,7 +159,7 @@ func Lookup(text string, lang string) (string, error) {
 	msg := ""
 
 	// 设置DeepL API的URL和API密钥
-	api_key := config.MyConfig.System.APIKeyDeepl
+	api_key := config.MyConfig.System.DeeplApiKey
 	if api_key == "" {
 		api_key = os.Getenv("DEEPL_API_KEY")
 		if api_key == "" {
