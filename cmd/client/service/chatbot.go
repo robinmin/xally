@@ -184,7 +184,7 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 
 	bot.clientdb, _ = clientdb.InitClientDB(path.Join(config.MyConfig.System.ChatHistoryPath, "xally.db"), verbose)
 
-	api_key := config.MyConfig.System.APIKeyOpenai
+	api_key := config.MyConfig.System.OpenaiApiKey
 	if !config.MyConfig.IsSharedMode() && api_key == "" {
 		bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
 		return bot
