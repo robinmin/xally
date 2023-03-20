@@ -48,7 +48,7 @@ func (c *ChatGPTCLient) fullURL(suffix string) string {
 	return fmt.Sprintf("%s%s", config.MyConfig.System.APIEndpointOpenai, suffix)
 }
 
-func (c *ChatGPTCLient) sendRequest(req *http.Request, v interface{}) error {
+func (c *ChatGPTCLient) sendRequest(req *http.Request, val interface{}) error {
 	///////////////////////////////////////////////////////////////////////////
 	// Add user defined header here
 	if config.MyConfig.IsSharedMode() && len(config.MyConfig.System.Email) > 0 {
@@ -92,8 +92,8 @@ func (c *ChatGPTCLient) sendRequest(req *http.Request, v interface{}) error {
 		return fmt.Errorf("error, status code: %d, message: %w", res.StatusCode, errRes.Error)
 	}
 
-	if v != nil {
-		if err = json.NewDecoder(res.Body).Decode(v); err != nil {
+	if val != nil {
+		if err = json.NewDecoder(res.Body).Decode(val); err != nil {
 			return err
 		}
 	}
