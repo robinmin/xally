@@ -1,8 +1,10 @@
 package model
 
 import (
+	"time"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	gpt3 "github.com/sashabaranov/go-openai"
 	"gorm.io/gorm"
 )
@@ -18,40 +20,45 @@ type Response struct {
 }
 
 type ConversationHistory struct {
-	gorm.Model
+	// gorm.Model
+	ID        string `gorm:"type:char(36); primaryKey; not null;"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt gorm.DeletedAt `gorm:"index"`
 
 	// additional fields
-	Role     string `gorm:"size:64;not null;" json:"role"`
-	Username string `gorm:"size:64;not null;" json:"username"`
+	Role     string `gorm:"type:varchar(64); not null;" json:"role"`
+	Username string `gorm:"type:varchar(64); not null;" json:"username"`
 
 	// from request struct
-	AIModel string `gorm:"size:64;not null;" json:"ai_model"`
-	MsGSize int    `gorm:"not null;" json:"req_msg_size,omitempty"`
+	AIModel string `gorm:"type:varchar(64); not null;" json:"ai_model"`
+	MsGSize int    `gorm:"not null; default:0;" json:"req_msg_size,omitempty"`
 
-	LatestMsgRole    string `gorm:"size:64;not null;" json:"req_latest_msg_role,omitempty"`
-	LatestMsgContent string `gorm:"size:1024;not null;" json:"req_latest_msg_content,omitempty"`
+	LatestMsgRole    string `gorm:"type:varchar(64); not null;" json:"req_latest_msg_role,omitempty"`
+	LatestMsgContent string `gorm:"type:text;" json:"req_latest_msg_content,omitempty"`
 
 	MaxTokens   int     `json:"req_max_tokens,omitempty"`
 	Temperature float32 `json:"req_temperature,omitempty"`
 	TopP        float32 `json:"req_top_p,omitempty"`
 	N           int     `json:"req_n,omitempty"`
-	User        string  `json:"req_user,omitempty"`
+	User        string  `gorm:"type:varchar(64);" json:"req_user,omitempty"`
 
 	// from response struct
-	ID               string `gorm:"size:64;not null;" json:"rsp_id"`
-	Object           string `gorm:"size:64;not null;" json:"rsp_object"`
-	ChoiceSize       int    `gorm:"not null;" json:"rsp_choice_size,omitempty"`
+	ResponseID       string `gorm:"type:varchar(64); not null;" json:"response_id"`
+	Object           string `gorm:"type:varchar(64); not null;" json:"rsp_object"`
+	ChoiceSize       int    `gorm:"not null; default:0;" json:"rsp_choice_size,omitempty"`
 	PromptTokens     int    `json:"rsp_prompt_tokens,omitempty"`
 	CompletionTokens int    `json:"rsp_completion_tokens,omitempty"`
 	TotalTokens      int    `json:"rsp_total_tokens,omitempty"`
 
-	LatestChoiceRole         string `gorm:"size:64;" json:"latest_choice_role,omitempty"`
-	LatestChoiceContent      string `gorm:"size:1024;" json:"latest_choice_content,omitempty"`
-	LatestChoiceName         string `gorm:"size:64;" json:"latest_choice_name,omitempty"`
-	LatestChoiceFinishReason string `gorm:"size:64;" json:"latest_choice_finish_reason,omitempty"`
+	LatestChoiceRole         string `gorm:"type:varchar(64);" json:"latest_choice_role,omitempty"`
+	LatestChoiceContent      string `gorm:"type:text;" json:"latest_choice_content,omitempty"`
+	LatestChoiceName         string `gorm:"type:varchar(64);" json:"latest_choice_name,omitempty"`
+	LatestChoiceFinishReason string `gorm:"type:varchar(256);" json:"latest_choice_finish_reason,omitempty"`
 }
 
 func (ch *ConversationHistory) LoadRequest(role string, username string, request *gpt3.ChatCompletionRequest) {
+	ch.ID = uuid.New().String()
 	ch.Role = role
 	ch.Username = username
 	if request == nil {
@@ -61,7 +68,7 @@ func (ch *ConversationHistory) LoadRequest(role string, username string, request
 	ch.MsGSize = len(request.Messages)
 	if len(request.Messages) > 0 {
 		ch.LatestMsgRole = request.Messages[len(request.Messages)-1].Role
-		ch.LatestMsgContent = TruncateStr(request.Messages[len(request.Messages)-1].Content, 1024)
+		ch.LatestMsgContent = request.Messages[len(request.Messages)-1].Content
 	}
 
 	ch.MaxTokens = request.MaxTokens
@@ -76,7 +83,7 @@ func (ch *ConversationHistory) LoadResponse(response *gpt3.ChatCompletionRespons
 		return
 	}
 
-	ch.ID = response.ID
+	ch.ResponseID = response.ID
 	ch.Object = response.Object
 	ch.ChoiceSize = len(response.Choices)
 	ch.PromptTokens = response.Usage.PromptTokens
@@ -84,7 +91,7 @@ func (ch *ConversationHistory) LoadResponse(response *gpt3.ChatCompletionRespons
 	ch.TotalTokens = response.Usage.TotalTokens
 	if len(response.Choices) > 0 {
 		ch.LatestChoiceRole = response.Choices[len(response.Choices)-1].Message.Role
-		ch.LatestChoiceContent = TruncateStr(response.Choices[len(response.Choices)-1].Message.Content, 1024)
+		ch.LatestChoiceContent = response.Choices[len(response.Choices)-1].Message.Content
 		ch.LatestChoiceName = response.Choices[len(response.Choices)-1].Message.Name
 		ch.LatestChoiceFinishReason = response.Choices[len(response.Choices)-1].FinishReason
 	}
