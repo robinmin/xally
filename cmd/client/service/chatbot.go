@@ -203,7 +203,9 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 		HTTPClient: api_cfg.HTTPClient,
 	}
 
-	greeting_msg := fmt.Sprintf(config.Text("greeting_msg"), bot.name, config.Version, bot.name, strftime.Format(time.Now(), "%Y-%m-%d %H:%M:%S"))
+	flags := strftime.Format(time.Now(), "%m-%d %H:%M ") + config.MyConfig.GetCurrentMode(bot.CheckConnectivity())
+	greeting_msg := fmt.Sprintf(config.Text("greeting_msg"), bot.name, config.Version, bot.name, flags)
+
 	var option_history []string
 	var err error
 	if bot.clientdb != nil {
@@ -709,4 +711,20 @@ func (bot *ChatBot) initChatHistory(chat_history_path string, prefix string) boo
 		}
 	}
 	return true
+}
+
+func (bot *ChatBot) CheckConnectivity() bool {
+	// always return true when non-shared mode
+	if config.MyConfig.System.UseSharedMode == 0 {
+		return true
+	}
+
+	// check app_token is valid or not
+	if len(config.MyConfig.System.AppToken) > 0 {
+		// TODO : call remote RPC to check app_token is valid or not
+		return false
+	}
+
+	// invalid app_token when shared mode
+	return false
 }
