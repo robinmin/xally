@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -57,7 +58,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 		System: SysSystem{
 			SentryDSN:         "",
 			ChatHistoryPath:   path.Dir(cfg_file),
-			LogPath:           "logs",
+			LogPath:           path.Dir(cfg_file),
 			LogLevel:          "info",
 			PeferenceLanguage: os.Getenv("LANG"),
 			DefaultRole:       "fullstack",
@@ -148,6 +149,27 @@ func NewSysConfig(cfg_file string) *SysConfig {
 
 func (cfg *SysConfig) IsSharedMode() bool {
 	return cfg.System.UseSharedMode > 0 && len(cfg.System.AppToken) > 0
+}
+
+func (cfg *SysConfig) GetCurrentMode(connected bool) string {
+	var flags string
+	if cfg.System.UseSharedMode > 0 {
+		if len(cfg.System.AppToken) > 0 && connected {
+			flags = "🔥"
+		} else {
+			flags = "❌"
+		}
+	} else {
+		if "https://api.openai.com/v1" == strings.ToLower(cfg.System.APIEndpointOpenai) {
+			flags = "✅"
+		} else {
+			flags = "🚧"
+		}
+	}
+	if DebugMode {
+		flags = flags + "🐛"
+	}
+	return flags
 }
 
 func (cfg *SysConfig) DumpIntoYAML(cfg_file string) (string, error) {
