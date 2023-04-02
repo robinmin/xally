@@ -46,6 +46,9 @@ const (
 	// execute host command on local machine
 	Cmd
 
+	// Config system setting
+	Config
+
 	// Reset suggestion
 	Reset
 
@@ -90,6 +93,9 @@ func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
 		},
 		Cmd: {
 			{Text: "cmd", Description: config.Text("tips_suggestion_cmd")},
+		},
+		Config: {
+			{Text: "config-email", Description: config.Text("tips_suggestion_cmd")},
 		},
 		Reset: reset_rolese,
 		Quit: {
@@ -157,6 +163,7 @@ type ChatBot struct {
 
 	plugin_mgr *PluginManager
 	kb_padding *LivePrefixState
+	connected  bool
 }
 
 func NewChatbot(chat_history_path string, name string, role_name string, log_history bool, verbose bool) *ChatBot {
@@ -203,9 +210,6 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 		HTTPClient: api_cfg.HTTPClient,
 	}
 
-	flags := strftime.Format(time.Now(), "%m-%d %H:%M ") + config.MyConfig.GetCurrentMode(bot.CheckConnectivity())
-	greeting_msg := fmt.Sprintf(config.Text("greeting_msg"), bot.name, config.Version, bot.name, flags)
-
 	var option_history []string
 	var err error
 	if bot.clientdb != nil {
@@ -234,6 +238,9 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 
 	// greetings once everything is ready
 	bot.dumpChatHistory("\n")
+
+	flags := strftime.Format(time.Now(), "%m-%d %H:%M ") + config.MyConfig.GetCurrentMode(bot.CheckConnectivity())
+	greeting_msg := fmt.Sprintf(config.Text("greeting_msg"), bot.name, config.Version, bot.name, flags)
 	bot.Say(greeting_msg, false)
 
 	return bot
@@ -285,6 +292,12 @@ func (bot *ChatBot) getExecutor(dir string) func(string) {
 			msg, need_dump, err := bot.CommandProcessor(cmds, commandFields)
 			if err != nil {
 				log.Error(err.Error())
+				if config.DebugMode {
+					bot.Say(err.Error(), false)
+					if len(msg) > 0 {
+						bot.Say(msg, need_dump)
+					}
+				}
 			} else {
 				if len(msg) > 0 {
 					bot.Say(msg, need_dump)
@@ -442,6 +455,15 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 			need_dump = true
 			err = errors.New(config.Text("sys_not_enough_cmd"))
 		}
+	case "config-email":
+		log.Debug("Execute [cmd] command on : ", original_msg)
+
+		if len(arr_cmd) >= 3 {
+			msg, err = bot.client.UserRegistration(arr_cmd[1], arr_cmd[2])
+		} else {
+			msg = config.Text("tips_config_email_usage")
+			need_dump = false
+		}
 	default:
 		log.Debug("Execute fallback command on : ", original_msg)
 
@@ -514,6 +536,12 @@ func (bot *ChatBot) Close(exit bool) {
 		bot.chat_history_file = nil
 	}
 
+	// logout if necessary
+	if config.MyConfig.System.UseSharedMode > 0 && !config.MyConfig.UsingOriginalService() && bot.connected {
+		bot.client.UserLogout()
+		bot.connected = false
+	}
+
 	if exit {
 		os.Exit(0)
 	}
@@ -527,6 +555,11 @@ func (bot *ChatBot) Say(msg string, need_dump bool) {
 }
 
 func (bot *ChatBot) Ask(question string) bool {
+	if !bot.connected {
+		bot.Say(config.Text("tips_not_connected"), false)
+		return false
+	}
+
 	need_quit := false
 
 	if len(question) <= 2 {
@@ -559,17 +592,23 @@ func (bot *ChatBot) Ask(question string) bool {
 		}
 
 		if len(bot.msg_history) < init_msg_len {
-			fmt.Println("🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸 resetting role......")
 			// we assume the default configuration is fine
 			bot.resetRole(bot.role.Name, true)
 			token_len = bot.estimateAvailableTokenNumber(len(question))
+
+			if config.DebugMode {
+				fmt.Println("🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸 resetting role......")
+			}
 			break
 		} else {
-			fmt.Print("🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻 erasing old history......")
 			// popup the old conversation history but key the prompt and the potential opening
 			size_before := len(bot.msg_history)
 			bot.msg_history = slices.Delete(bot.msg_history, init_msg_len, init_msg_len+1)
-			fmt.Printf("%d --> %d\n", size_before, len(bot.msg_history))
+
+			if config.DebugMode {
+				fmt.Print("🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻 erasing old history......")
+				fmt.Printf("%d --> %d\n", size_before, len(bot.msg_history))
+			}
 		}
 	}
 
@@ -613,7 +652,12 @@ func (bot *ChatBot) Ask(question string) bool {
 		bot.token_counter_completion = resp.Usage.CompletionTokens
 		bot.token_counter_prompt = resp.Usage.PromptTokens
 
-		message := resp.Choices[0].Message.Content
+		var message string
+		if len(resp.Choices) > 0 {
+			message = resp.Choices[0].Message.Content
+		} else {
+			message = "Invalid response from server."
+		}
 
 		fmt.Println(bot.role.Avatar + prompt_tip_flag)
 		bot.Say(message, false)
@@ -716,15 +760,52 @@ func (bot *ChatBot) initChatHistory(chat_history_path string, prefix string) boo
 func (bot *ChatBot) CheckConnectivity() bool {
 	// always return true when non-shared mode
 	if config.MyConfig.System.UseSharedMode == 0 {
+		bot.connected = true
 		return true
 	}
 
+	var msg string
+	var err error
+
 	// check app_token is valid or not
-	if len(config.MyConfig.System.AppToken) > 0 {
-		// TODO : call remote RPC to check app_token is valid or not
-		return false
+	// if len(config.MyConfig.System.AppToken) > 0 {
+	// call remote RPC to check app_token is valid or not
+	if msg, err = bot.ShakeHands(); err != nil {
+		log.Error("Failed when shaking hands with the server : " + err.Error())
+		bot.connected = false
+	} else {
+		bot.connected = true
 	}
 
+	if len(msg) > 0 {
+		bot.Say(msg, false)
+	}
+
+	return bot.connected
+	// }
+
 	// invalid app_token when shared mode
-	return false
+	// return false
+}
+
+func (bot *ChatBot) ShakeHands() (string, error) {
+	// avoid to contact with the server if non-relay server case
+	if config.MyConfig.System.UseSharedMode == 0 {
+		return "", nil
+	}
+
+	if config.MyConfig.UsingOriginalService() {
+		msg := config.Text("tips_invalid_server")
+		return msg, errors.New(msg)
+	}
+
+	// when using relay server
+	if len(config.MyConfig.System.Email) == 0 {
+		return config.Text("tips_no_email"), nil
+	}
+	if len(config.MyConfig.System.AppToken) == 0 {
+		return config.Text("tips_no_app_token"), nil
+	}
+
+	return bot.client.UserLogin()
 }
