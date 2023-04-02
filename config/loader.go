@@ -109,6 +109,7 @@ func LoadClientConfig(config_file string, verbose bool) (*SysConfig, error) {
 	var temp_file string
 	var default_config_file string
 	var err error
+
 	if config_file == "" {
 		var dir_home string
 		var err error
@@ -155,12 +156,21 @@ func LoadClientConfig(config_file string, verbose bool) (*SysConfig, error) {
 		}
 	}
 
+	SetupPeferenceLanguage(MyConfig.System.PeferenceLanguage)
+
 	return MyConfig, nil
 }
 
+var peference_language string
+
+func SetupPeferenceLanguage(language string) {
+	peference_language = language
+}
+
 func Text(str_key string) string {
-	msg := ""
-	switch MyConfig.System.PeferenceLanguage {
+	var msg string
+
+	switch peference_language {
 	case "EN", "en_US.UTF-8", "C":
 		if str_val, ok := i18n_str_table_en[str_key]; ok {
 			msg = str_val
@@ -183,4 +193,17 @@ func Text(str_key string) string {
 		}
 	}
 	return msg
+}
+
+func GetAcceptLanguage() string {
+	switch peference_language {
+	case "EN", "en_US.UTF-8", "C":
+		return "en"
+	case "JP", "ja_JP.UTF-8":
+		return "ja"
+	case "CN", "zh_CN.UTF-8":
+		return "zh"
+	default:
+		return "en"
+	}
 }
