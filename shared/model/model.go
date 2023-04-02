@@ -1,9 +1,13 @@
 package model
 
 import (
+	"os"
+	"os/user"
 	"time"
 	"unicode/utf8"
 
+	"github.com/denisbrodbeck/machineid"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	gpt3 "github.com/sashabaranov/go-openai"
 	"gorm.io/gorm"
@@ -14,9 +18,9 @@ import (
 ******************************************************************************/
 // type ResponseBody map[string]interface{}
 type Response struct {
-	Msg  string      `json:"msg"`
-	Code uint32      `json:"code"`
-	Data interface{} `json:"data,omitempty"`
+	Msg  string `json:"msg"`
+	Code uint32 `json:"code"`
+	Data gin.H  `json:"data,omitempty"`
 }
 
 type ConversationHistory struct {
@@ -103,4 +107,54 @@ func TruncateStr(str string, maxLen int) string {
 		return string([]rune(str)[:maxLen])
 	}
 	return str
+}
+
+type UserInfo struct {
+	Username   string    `json:"username"`
+	UserID     string    `json:"userid"`
+	Hostname   string    `json:"hostname"`
+	Email      string    `json:"email"`
+	DeviceInfo string    `json:"device_info"`
+	Password   string    `json:"password"`
+	AppToken   string    `json:"app_token"`
+	RegisterAt time.Time `json:"register_at"`
+}
+
+func NewUserInfo(app_token string, email string, password string) (*UserInfo, error) {
+	var err error
+	var device_info string
+	var current_user *user.User
+
+	// get user id
+	current_user, err = user.Current()
+	if err != nil {
+		return nil, err
+	}
+
+	// get device info
+	if len(app_token) > 0 {
+		device_info, err = machineid.ProtectedID(app_token)
+	} else {
+		device_info, err = machineid.ID()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	hostname, _ := os.Hostname()
+	if hostname == "" {
+		hostname = "unknown"
+	}
+
+	userform := &UserInfo{
+		Username:   current_user.Username,
+		UserID:     current_user.Uid,
+		Hostname:   hostname,
+		Email:      email,
+		DeviceInfo: device_info,
+		Password:   password,
+		AppToken:   app_token,
+		RegisterAt: time.Now(),
+	}
+	return userform, nil
 }
