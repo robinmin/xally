@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"path"
 
+	"github.com/robinmin/xally/cmd/server/controller"
 	"github.com/robinmin/xally/config"
+	"github.com/robinmin/xally/shared/model"
 	"github.com/robinmin/xally/shared/utility"
 	gpt3 "github.com/sashabaranov/go-openai"
+	log "github.com/sirupsen/logrus"
 )
 
 type ChatGPTCLient struct {
@@ -50,25 +55,36 @@ func (c *ChatGPTCLient) fullURL(suffix string) string {
 
 func (c *ChatGPTCLient) sendRequest(req *http.Request, val interface{}) error {
 	///////////////////////////////////////////////////////////////////////////
-	// Add user defined header here
-	if config.MyConfig.IsSharedMode() && len(config.MyConfig.System.Email) > 0 {
-		if token, err := utility.GenerateAccessToken(config.MyConfig.System.AppToken, config.MyConfig.System.Email); err == nil {
-			req.Header.Set(config.PROXY_TOKEN_NAME, token)
+	// Add user defined headers here
+	if config.MyConfig.IsSharedMode() {
+		if len(config.MyConfig.System.AppToken) > 0 {
+			// if tk, err := token.GenerateAccessToken(config.MyConfig.System.AppToken, config.MyConfig.System.Email); err == nil {
+			req.Header.Set(config.PROXY_TOKEN_NAME, config.MyConfig.System.AppToken)
+			// }
+		} else {
+			return errors.New("Please set APP_TOKEN and Email in sharing mode")
+		}
+	} else {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.MyConfig.System.OpenaiApiKey))
+		if len(config.MyConfig.System.OpenaiOrgID) > 0 {
+			req.Header.Set("OpenAI-Organization", config.MyConfig.System.OpenaiOrgID)
 		}
 	}
 	///////////////////////////////////////////////////////////////////////////
 
-	req.Header.Set("Accept", "application/json; charset=utf-8")
+	acceptType := req.Header.Get("Accept")
+	if acceptType == "" {
+		req.Header.Set("Accept", "application/json; charset=utf-8")
+	}
+	acceptLang := req.Header.Get("Accept-Language")
+	if acceptLang == "" {
+		req.Header.Set("Accept-Language", "application/json; charset=utf-8")
+	}
 	// Check whether Content-Type is already set, Upload Files API requires
 	// Content-Type == multipart/form-data
 	contentType := req.Header.Get("Content-Type")
 	if contentType == "" {
 		req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", config.MyConfig.System.OpenaiApiKey))
-	if len(config.MyConfig.System.OpenaiOrgID) > 0 {
-		req.Header.Set("OpenAI-Organization", config.MyConfig.System.OpenaiOrgID)
 	}
 
 	res, err := c.HTTPClient.Do(req)
@@ -78,25 +94,128 @@ func (c *ChatGPTCLient) sendRequest(req *http.Request, val interface{}) error {
 
 	defer res.Body.Close()
 
+	// filter out internal errors
 	if res.StatusCode < http.StatusOK || res.StatusCode >= http.StatusBadRequest {
-		var errRes gpt3.ErrorResponse
+		var errRes model.Response
 		err = json.NewDecoder(res.Body).Decode(&errRes)
-		if err != nil || errRes.Error == nil {
-			reqErr := gpt3.RequestError{
-				StatusCode: res.StatusCode,
-				Err:        err,
-			}
-			return fmt.Errorf("error, %w", &reqErr)
+		if err != nil {
+			return fmt.Errorf("error, status code: %d, message: invalid response body.", res.StatusCode)
 		}
-		errRes.Error.StatusCode = res.StatusCode
-		return fmt.Errorf("error, status code: %d, message: %w", res.StatusCode, errRes.Error)
+
+		return fmt.Errorf(
+			"error, http status code: %d, biz_code: %d, message: %s",
+			res.StatusCode,
+			errRes.Code,
+			errRes.Msg,
+		)
 	}
 
+	// copy response data
 	if val != nil {
 		if err = json.NewDecoder(res.Body).Decode(val); err != nil {
 			return err
 		}
 	}
 
+	// update refreshed token if necessary and update into YAML file
+	if config.MyConfig.IsSharedMode() {
+		new_access_token := res.Header.Get(config.PROXY_TOKEN_NAME)
+		if len(new_access_token) > 0 && new_access_token != config.MyConfig.System.AppToken {
+			config.MyConfig.System.AppToken = new_access_token
+
+			var temp_file string
+			var dir_home string
+			var err error
+
+			if dir_home, err = config.FindHomeDir(false); err != nil {
+				dir_home = "."
+			}
+			temp_file = path.Join(dir_home, "xally.yaml")
+			if _, err = config.MyConfig.DumpIntoYAML(temp_file); err != nil {
+				log.Error("Failed to write YAML data into :" + temp_file)
+			}
+		}
+	}
+
 	return nil
+}
+
+func (c *ChatGPTCLient) UserLogin() (string, error) {
+	return "", nil
+}
+
+func (c *ChatGPTCLient) UserLogout() (string, error) {
+	return "", nil
+}
+
+func (c *ChatGPTCLient) UserRegistration(email string, endpoint_url string) (string, error) {
+	var msg string
+
+	if !utility.IsValidEmail(email) {
+		msg = fmt.Sprintf(config.Text("error_invalid_email"), email)
+		return msg, nil
+	}
+
+	if !utility.IsValidURL(endpoint_url) {
+		msg = fmt.Sprintf(config.Text("error_invalid_endpoint_url"), endpoint_url)
+		return msg, nil
+	}
+
+	// get remote URL
+	request, err := model.NewUserInfo("", email, "")
+	if err != nil {
+		return "", err
+	}
+
+	var reqBytes []byte
+	reqBytes, err = json.Marshal(request)
+	if err != nil {
+		return err.Error(), err
+	}
+
+	request_url := utility.GetBaseURL(endpoint_url) + "user/register/"
+	code, resp_body, err := utility.FetchURL("POST", request_url, string(reqBytes), nil)
+	if code != http.StatusOK || err != nil {
+		if err == nil {
+			msg = fmt.Sprintf("error, status code: %d, body: %s", code, resp_body)
+		} else {
+			msg = fmt.Sprintf("error, status code: %d, message: %s, body: %s", code, err.Error(), resp_body)
+		}
+		return msg, err
+	}
+
+	if len(resp_body) != 0 {
+		var result model.Response
+		err = json.Unmarshal([]byte(resp_body), &result)
+		if err != nil {
+			log.Error("Failed to unmarshal HTTP response body: " + err.Error())
+		} else {
+			if result.Code == controller.ERR_OK && result.Data != nil {
+				access_token, ok := result.Data["access_token"].(string)
+				if ok {
+					var temp_file string
+					var dir_home string
+
+					// update local configuration
+					config.MyConfig.System.Email = email
+					config.MyConfig.System.APIEndpointOpenai = endpoint_url
+					config.MyConfig.System.UseSharedMode = 1
+					config.MyConfig.System.AppToken = access_token
+
+					var err error
+					if dir_home, err = config.FindHomeDir(false); err != nil {
+						dir_home = "."
+					}
+					temp_file = path.Join(dir_home, "xally.yaml")
+					if _, err = config.MyConfig.DumpIntoYAML(temp_file); err != nil {
+						log.Error("Failed to write YAML data into :" + temp_file)
+					}
+					return resp_body, nil
+				}
+			} else {
+				log.Errorf("Failed to register user [%v] : %s ", result.Code, result.Msg)
+			}
+		}
+	}
+	return resp_body, nil
 }
