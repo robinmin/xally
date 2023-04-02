@@ -2,8 +2,8 @@ package utility
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,15 +11,16 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"os/user"
+	"path"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
 	"github.com/charmbracelet/glamour"
-	"github.com/denisbrodbeck/machineid"
-	"github.com/dgrijalva/jwt-go"
+	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"gopkg.in/gomail.v2"
 
 	"github.com/robinmin/xally/config"
 )
@@ -241,11 +242,26 @@ func FetchURL(verb string, url string, payload string, headers map[string]string
 			req.Header.Set(key, value)
 		}
 	}
+	// set the http headers if not specified
+	acceptType := req.Header.Get("Accept")
+	if acceptType == "" {
+		req.Header.Set("Accept", "application/json; charset=utf-8")
+	}
+	acceptLang := req.Header.Get("Accept-Language")
+	if acceptLang == "" {
+		req.Header.Set("Accept-Language", "application/json; charset=utf-8")
+	}
+	contentType := req.Header.Get("Content-Type")
+	if contentType == "" {
+		req.Header.Set("Content-Type", config.GetAcceptLanguage())
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36")
 
 	// 创建HTTP客户端
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
+
 	resp, err := client.Do(req)
 	if resp != nil {
 		resp_code = resp.StatusCode
@@ -291,6 +307,20 @@ func FetchURLWithRetry(verb string, url string, payload string, headers map[stri
 			req.Header.Set(key, value)
 		}
 	}
+	// set the http headers if not specified
+	acceptType := req.Header.Get("Accept")
+	if acceptType == "" {
+		req.Header.Set("Accept", "application/json; charset=utf-8")
+	}
+	acceptLang := req.Header.Get("Accept-Language")
+	if acceptLang == "" {
+		req.Header.Set("Accept-Language", "application/json; charset=utf-8")
+	}
+	contentType := req.Header.Get("Content-Type")
+	if contentType == "" {
+		req.Header.Set("Content-Type", config.GetAcceptLanguage())
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36")
 
 	// 创建HTTP客户端
 	client := &http.Client{
@@ -324,63 +354,88 @@ func FetchURLWithRetry(verb string, url string, payload string, headers map[stri
 	return resp_code, "", fmt.Errorf("failed to load URL %s after %d retries: status code %d", url, retries, resp.StatusCode)
 }
 
-func GenerateAccessToken(app_key string, email string) (string, error) {
-	var err error
-	var device_info string
-	var current_user *user.User
+func SendEmail(to, subject, body string) error {
+	m := gomail.NewMessage()
+	m.SetHeader("From", config.SvrConfig.Server.SMTPUsername)
+	m.SetHeader("To", to)
+	// m.SetAddressHeader("Cc", "dan@example.com", "Dan")
+	m.SetHeader("Subject", subject)
+	m.SetBody("text/html", body)
+	// m.Attach("/home/Alex/lolcat.jpg")
 
-	// get user id
-	current_user, err = user.Current()
-	if err != nil {
-		log.Error("Failed to get current user information: %v", err.Error())
-		return "", err
+	d := gomail.NewDialer(
+		config.SvrConfig.Server.SMTPServer,
+		config.SvrConfig.Server.SMTPPort,
+		config.SvrConfig.Server.SMTPUsername,
+		config.SvrConfig.Server.SMTPPassword,
+	)
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+
+	// Send the email to Bob, Cora and Dan.
+	if err := d.DialAndSend(m); err != nil {
+		log.Error("Failed to send email : " + err.Error())
+		return err
 	}
 
-	// get device info
-	if len(app_key) > 0 {
-		device_info, err = machineid.ProtectedID(app_key)
-	} else {
-		device_info, err = machineid.ID()
-	}
-	if err != nil {
-		log.Error("Failed to get device information: %v", err.Error())
-		return "", err
-	}
+	// // 配置SMTP客户端
+	// auth := smtp.PlainAuth(
+	// 	"",
+	// 	config.SvrConfig.Server.SMTPUsername,
+	// 	config.SvrConfig.Server.SMTPPassword,
+	// 	config.SvrConfig.Server.SMTPServer,
+	// )
+	// addr := fmt.Sprintf("%s:%d", config.SvrConfig.Server.SMTPServer, config.SvrConfig.Server.SMTPPort)
 
-	claims := jwt.MapClaims{}
-	claims["authorized"] = true
+	// // 构造邮件内容
+	// msg := []byte("To: " + to + "\r\n" +
+	// 	"Subject: " + subject + "\r\n" +
+	// 	"\r\n" +
+	// 	body + "\r\n")
 
-	claims["uid"] = current_user.Uid
-	claims["username"] = current_user.Username
-	claims["email"] = email
-	claims["device_info"] = device_info
+	// // 发送邮件
+	// err := smtp.SendMail(addr, auth, config.SvrConfig.Server.SMTPUsername, []string{to}, msg)
+	// if err != nil {
+	// 	return err
+	// }
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-
-	return token.SignedString([]byte(app_key))
+	return nil
 }
 
-func ExtractAccessInfo(app_key string, access_token string) (jwt.MapClaims, error) {
-	if access_token == "" {
-		log.Error("Blank access token in ExtractAccessInfo")
-		return nil, nil
-	}
-
-	token, err := jwt.Parse(access_token, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
+func GetBaseURL(endpoint_url string) string {
+	u, err := url.Parse(endpoint_url)
+	if err == nil {
+		var parent *url.URL
+		if len(u.Path) > 1 {
+			parent = &url.URL{
+				Scheme: u.Scheme,
+				Host:   u.Host,
+				Path:   path.Dir(u.Path),
+			}
+		} else {
+			parent = &url.URL{
+				Scheme: u.Scheme,
+				Host:   u.Host,
+				Path:   u.Path,
+			}
 		}
-		return []byte(app_key), nil
-	})
-	if err != nil {
-		log.Error(err.Error())
-		return nil, err
+		return parent.String()
 	}
+	return "http://127.0.0.1:8090/"
+}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if ok && token.Valid {
-		return claims, nil
+func IsValidEmail(email string) bool {
+	return regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`).MatchString(email)
+}
+
+func IsValidURL(url_str string) bool {
+	u, err := url.Parse(url_str)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return false
 	}
+	return true
+}
 
-	return nil, errors.New("Invalid access token")
+func AcceptJSONResponse(ctx *gin.Context) bool {
+	accpt_type := ctx.Request.Header.Get("Accept")
+	return strings.Contains(strings.ToLower(accpt_type), "application/json")
 }
