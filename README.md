@@ -173,7 +173,7 @@ server:
   app_token_lifespan: 1											# Server-side token expiration time (hours)	
   white_list_refresh_interval: 300					# Whitelist refresh interval(seconds)
   listen_addr: ":8090"											#Server-side listening address
-	external_endpoint: https://your_domain_name/v1	# External exposure of service address for email activation of accounts
+  external_endpoint: https://your_domain_name/v1	# External exposure of service address for email activation of accounts
   smtp_server: 															# SMTP server host
   smtp_port: 587														# SMTP server port
   smtp_username: 														# SMTP user name

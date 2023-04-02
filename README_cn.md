@@ -176,7 +176,7 @@ server:
   app_token_lifespan: 1											# 服务端token过期时间（小时）																	
   white_list_refresh_interval: 300					# 白名单刷新周期（秒）
   listen_addr: ":8090"											# 服务端监听地址
-	external_endpoint: https://your_domain_name/v1	# 对外暴露服务地址，用于邮件激活账户
+  external_endpoint: https://your_domain_name/v1	# 对外暴露服务地址，用于邮件激活账户
   smtp_server: 															# SMTP服务器地址
   smtp_port: 587														# SMTP服务器端口
   smtp_username: 														# SMTP用户名
