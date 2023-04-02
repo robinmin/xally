@@ -160,7 +160,7 @@ func (cfg *SysConfig) GetCurrentMode(connected bool) string {
 			flags = "❌"
 		}
 	} else {
-		if "https://api.openai.com/v1" == strings.ToLower(cfg.System.APIEndpointOpenai) {
+		if cfg.UsingOriginalService() {
 			flags = "✅"
 		} else {
 			flags = "🚧"
@@ -208,4 +208,11 @@ func (cfg *SysConfig) FindRole(role_name string) (*SysRole, error) {
 		}
 	}
 	return role, nil
+}
+
+func (cfg *SysConfig) UsingOriginalService() bool {
+	if "https://api.openai.com/v1" == strings.ToLower(cfg.System.APIEndpointOpenai) {
+		return true
+	}
+	return false
 }
