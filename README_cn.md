@@ -14,7 +14,7 @@ X-Ally是一个命令行界面的AI集成工具，用于辅助基于文本文字
 
 #### 安装
 
-  目前支持集中种安装模式：macOS上基于`brew`进行安装：
+  目前支持集中种安装模式：macOS/Linux上基于`brew`进行安装：
   ```bash
   # 仅仅首次需要添加tap
   brew tap robinmin/tap

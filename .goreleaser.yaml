@@ -106,6 +106,19 @@ brews:
     X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly.
   license: GPL-3.
 
+scoop:
+  bucket:
+    owner: robinmin
+    name: scoop-bucket
+  commit_author:
+    name: goreleaserbot
+    email: bot@goreleaser.com
+  folder: bucket
+  homepage: https://github.com/robinmin/xally
+  description: >-
+    X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly.
+  license: GPL-3.
+
 # The lines beneath this are called `modelines`. See `:help modeline`
 # Feel free to remove those if you don't want/use them.
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
