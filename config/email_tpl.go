@@ -6,12 +6,12 @@ package config
 //
 ///////////////////////////////////////////////////////////////
 
-func GetPageActiviate(activiate_url string) string {
+func GetPageActivate(activate_url string, msg string, title string, tips string) string {
 	return `<!DOCTYPE html>
-    <html lang="en">
+    <html lang="UTF-8">
     <head>
         <meta charset="UTF-8">
-        <title>Activate Your Account</title>
+        <title>` + title + `</title>
         <style>
             @import url('https://unpkg.com/tailwindcss@latest/dist/tailwind.min.css');
 
@@ -80,25 +80,25 @@ func GetPageActiviate(activiate_url string) string {
     <body>
     <center class="container">
         <div class="logo">
-            <img src="https://via.placeholder.com/150x50" alt="Logo">
+            <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" alt="Logo" />
         </div>
         <h2 class="text-2xl font-bold mb-4 text-center">X-Ally</h2>
 
-        <div class="title">Activate Your Account</div>
-        <div class="subtitle">Thank you for signing up! Please click the button below to activate your account.</div>
-        <center><a href="` + activiate_url + `" class="button">Activate Account</a></center>
-        <div class="footer">If you did not sign up for this account, please ignore this email.</div>
+        <div class="title">` + title + `</div>
+        <div class="subtitle">` + msg + `</div>
+        <center><a href="` + activate_url + `" class="button">Activate Account</a></center>
+        <div class="footer">` + tips + `</div>
     </div>
     </body>
     </html>`
 }
 
-func GetPageActiviated() string {
+func GetPageActiviated(msg string, title string, tips string) string {
 	return `<!DOCTYPE html>
-    <html lang="en">
+    <html lang="UTF-8">
     <head>
         <meta charset="UTF-8">
-        <title>Activate Your Account</title>
+        <title>` + title + `</title>
         <style>
             @import url('https://unpkg.com/tailwindcss@latest/dist/tailwind.min.css');
 
@@ -167,13 +167,13 @@ func GetPageActiviated() string {
     <body>
     <center class="container">
         <div class="logo">
-            <img src="https://via.placeholder.com/150x50" alt="Logo">
+            <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" alt="Logo">
         </div>
         <h2 class="text-2xl font-bold mb-4 text-center">X-Ally</h2>
 
-        <div class="title">Congratulations!</div>
-        <div class="subtitle">Your account is ready now. Have fun with X-Ally.</div>
-        <div class="footer">If you did not sign up for this account, please ignore this email.</div>
+        <div class="title">` + title + `</div>
+        <div class="subtitle">` + msg + `</div>
+        <div class="footer">` + tips + `</div>
     </div>
     </body>
     </html>`
