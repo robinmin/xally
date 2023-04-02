@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.7
-	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/denisbrodbeck/machineid v1.0.1

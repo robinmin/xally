@@ -6,55 +6,33 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"syscall"
 )
 
 // /////////////////////////////////////////////////////////////////////////////
 func IsWritable(path string, verbose bool) (isWritable bool, err error) {
-	isWritable = false
-	info, err := os.Stat(path)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		if verbose {
+			fmt.Printf("Path %s does not exist\n", path)
+		}
+		return false, err
+	}
+
+	file, err := os.OpenFile(path+"/.temp", os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		if verbose {
-			fmt.Println("Path doesn't exist")
+			fmt.Printf("Path %s is not writable\n", path)
 		}
-		return
+		return false, err
 	}
+	defer func() {
+		file.Close()
+		os.Remove(path + "/.temp")
+	}()
 
-	err = nil
-	if !info.IsDir() {
-		if verbose {
-			fmt.Println("Path isn't a directory")
-		}
-		return
+	if verbose {
+		fmt.Printf("Path %s is writable\n", path)
 	}
-
-	// Check if the user bit is enabled in file permission
-	if info.Mode().Perm()&(1<<(uint(7))) == 0 {
-		if verbose {
-			fmt.Println("Write permission bit is not set on this file for user")
-		}
-		return
-	}
-
-	var stat syscall.Stat_t
-	if err = syscall.Stat(path, &stat); err != nil {
-		if verbose {
-			fmt.Println("Unable to get stat")
-		}
-		return
-	}
-
-	err = nil
-	if uint32(os.Geteuid()) != stat.Uid {
-		isWritable = false
-		if verbose {
-			fmt.Println("User doesn't have permission to write to this directory")
-		}
-		return
-	}
-
-	isWritable = true
-	return
+	return true, nil
 }
 
 func GetRealFullPath(path string) (string, error) {

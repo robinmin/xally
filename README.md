@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.1.0)
+(v0.1.1)
 [TOC]
 
 <div align="center">

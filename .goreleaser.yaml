@@ -1,5 +1,6 @@
 # This is an example .goreleaser.yml file with some sensible defaults.
 # Make sure to check the documentation at https://goreleaser.com
+project_name: xally
 before:
   hooks:
     # You may remove this if you don't use go modules.
@@ -19,6 +20,12 @@ builds:
     goarch:
       - amd64
       - arm64
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
 
   - id: server
     main: ./cmd/server/main.go
@@ -32,7 +39,12 @@ builds:
     goarch:
       - amd64
       - arm64
-
+    ldflags:
+      - -s
+      - -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
 release:
   prerelease: auto
 

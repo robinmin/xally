@@ -72,7 +72,7 @@ fmt: ## Format all code
 check: ## run precke
 	$(info ******************** checking before commit ********************)
 	pre-commit run
-	goreleaser --snapshot --skip-publish --rm-dist
+	goreleaser --snapshot --skip-publish --clean
 
 ## Lint:
 lint:  ## Run all available linters
