@@ -20,7 +20,10 @@ type ProxyRoute struct {
 }
 
 type ServerConfigItems struct {
-	DSN                      string       `yaml:"DSN"`
+	DBHost                   string       `yaml:"db_host"`
+	DBPort                   string       `yaml:"db_port"`
+	DBUser                   string       `yaml:"db_user"`
+	DBPassword               string       `yaml:"db_password"`
 	SentryDSN                string       `yaml:"sentry_dsn,omitempty"`
 	OpenaiApiKey             string       `yaml:"openai_api_key"`
 	OpenaiOrgID              string       `yaml:"openai_org_id"`
@@ -29,6 +32,14 @@ type ServerConfigItems struct {
 	ListenAddr               string       `yaml:"listen_addr"`
 	WhiteListRefreshInterval int64        `yaml:"white_list_refresh_interval,omitempty"`
 	Routes                   []ProxyRoute `yaml:"routes,omitempty"`
+
+	ExternalEndpoint    string `yaml:"external_endpoint"`
+	SMTPServer          string `yaml:"smtp_server"`
+	SMTPPort            int    `yaml:"smtp_port"`
+	SMTPUsername        string `yaml:"smtp_username"`
+	SMTPPassword        string `yaml:"smtp_password"`
+	DirectEmailNotify   bool   `yaml:"direct_email_notify"`
+	EmailRestrictDomain string `yaml:"email_restrict_domain"`
 }
 
 type ServerConfig struct {
@@ -63,11 +74,15 @@ func (cfg *ServerConfig) LoadFromYAML(cfg_file string) error {
 var SvrConfig *ServerConfig
 
 func LoadServerConfig(config_file string, verbose bool) (*ServerConfig, error) {
-	SvrConfig = &ServerConfig{}
-
 	var temp_file string
 	var default_config_file string
 	var err error
+
+	SvrConfig = &ServerConfig{}
+
+	// use default language for all users
+	SetupPeferenceLanguage(os.Getenv("LANG"))
+
 	if config_file == "" {
 		var dir_home string
 		var err error
@@ -114,4 +129,14 @@ func LoadServerConfig(config_file string, verbose bool) (*ServerConfig, error) {
 	}
 
 	return SvrConfig, nil
+}
+
+func GetServerDSN() string {
+	return fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/xally?charset=utf8mb4&parseTime=True&loc=Local",
+		SvrConfig.Server.DBUser,
+		SvrConfig.Server.DBPassword,
+		SvrConfig.Server.DBHost,
+		SvrConfig.Server.DBPort,
+	)
 }
