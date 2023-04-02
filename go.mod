@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/JohannesKaufmann/html-to-markdown v1.3.7
+	github.com/axgle/mahonia v0.0.0-20180208002826-3358181d7394
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/charmbracelet/glamour v0.6.0
 	github.com/denisbrodbeck/machineid v1.0.1
@@ -17,6 +18,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/exp v0.0.0-20230310171629-522b1b587ee0
+	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/mysql v1.4.7
 	gorm.io/driver/sqlite v1.4.4
@@ -71,4 +73,5 @@ require (
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 )
