@@ -2,11 +2,12 @@ package controller
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -27,9 +28,19 @@ const (
 	ERR_INVALID_PARAMETERS ErrorCode = iota + 1000
 	ERR_INVALID_USER
 	ERR_INVALID_TOKEN
+	ERR_INVALID_USER_ID
 	ERR_TOKEN_EXPIRED
+	ERR_TOKEN_GENERATE_FAILED
 	ERR_DATA_PERSISTENCE
+	ERR_REGISTER_FAILED
+	ERR_SENDEMAIL_FAILED
+	ERR_ACTIVIATE_FAILED
+	ERR_DEACTIVIATE_FAILED
+	ERR_GENERATE_TOKEN_FAILED
+	ERR_UNKNOWN_FAILED
 )
+
+const EnableProxyLog = true
 
 // APIHandler 是所有API的处理器
 type APIHandler struct {
@@ -53,7 +64,7 @@ func NewAPIHandler(
 
 	// 初始化白名单
 	h.WhiteList = &serverdb.WhiteList{
-		AvailableUserMap: map[string]time.Time{},
+		AvailableUserMap: map[string]serverdb.WhiteListUser{},
 		Mutex:            &sync.RWMutex{},
 	}
 
@@ -68,18 +79,35 @@ func NewAPIHandler(
 }
 
 // 通用API响应
-func (h *APIHandler) Response(ctx *gin.Context, msg string, biz_code ErrorCode, body interface{}) {
-	if body == nil {
-		ctx.JSON(http.StatusOK, &model.Response{
+func (h *APIHandler) Response(ctx *gin.Context, msg string, biz_code ErrorCode, body gin.H) {
+	if utility.AcceptJSONResponse(ctx) {
+		rsps := &model.Response{
 			Msg:  msg,
 			Code: uint32(biz_code),
-		})
+		}
+		if body != nil {
+			rsps.Data = body
+		}
+		ctx.JSON(http.StatusOK, rsps)
 	} else {
-		ctx.JSON(http.StatusOK, &model.Response{
+		err_msg := fmt.Sprintf("[%v] : %s", biz_code, msg)
+		http.Error(ctx.Writer, err_msg, http.StatusOK)
+	}
+}
+
+func (h *APIHandler) ResponseRaw(ctx *gin.Context, msg string, biz_code ErrorCode, body gin.H, code int) {
+	if utility.AcceptJSONResponse(ctx) {
+		rsps := &model.Response{
 			Msg:  msg,
 			Code: uint32(biz_code),
-			Data: body,
-		})
+		}
+		if body != nil {
+			rsps.Data = body
+		}
+		ctx.JSON(code, rsps)
+	} else {
+		err_msg := fmt.Sprintf("[%v] : %s", biz_code, msg)
+		http.Error(ctx.Writer, err_msg, code)
 	}
 }
 
@@ -88,15 +116,8 @@ func (h *APIHandler) RegisterRoutes(router *gin.Engine, routes *[]config.ProxyRo
 	// set default processer
 	router.NoRoute(h.noRouteHandler())
 	router.NoMethod(h.noMethodHandler())
-	router.GET("/user/activiate/:token", func(ctx *gin.Context) {
-		token := ctx.Param("token")
-		ctx.Writer.WriteHeader(http.StatusOK)
-		ctx.Writer.Write([]byte(config.GetPageActiviate("/user/activiated/" + token)))
-	})
-	router.GET("/user/activiated/:token", func(ctx *gin.Context) {
-		ctx.Writer.WriteHeader(http.StatusOK)
-		ctx.Writer.Write([]byte(config.GetPageActiviated()))
-	})
+	router.POST("/user/register/", h.registerUser())
+	router.GET("/user/activate/:token", h.VerifyUser())
 
 	for _, rt := range *routes {
 		// Just logging the mapping.
@@ -108,71 +129,51 @@ func (h *APIHandler) RegisterRoutes(router *gin.Engine, routes *[]config.ProxyRo
 		} else {
 			router.Any(
 				rt.Context,
-				h.errorHandlerMiddleware(),
+				h.authMiddleware(),
 				h.reverseProxyHandler(target, config.SvrConfig.Server.OpenaiApiKey, config.SvrConfig.Server.OpenaiOrgID),
 			)
 		}
 	}
-
 }
 
 func (h *APIHandler) reverseProxyHandler(target *url.URL, auth_token string, org_id string) gin.HandlerFunc {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	return func(ctx *gin.Context) {
-		// 检查用户是否在白名单中
-		access_token := ctx.Request.Header.Get(config.PROXY_TOKEN_NAME)
-		if access_token == "" || !h.WhiteList.IsAccessTokenValid(access_token) {
-			// Add information into table, automatic registration
-			if len(access_token) > 0 {
-				if _, err := serverdb.RegisterUser(access_token); err != nil {
-					log.Error("Failed to register by access token")
-				}
+		if _, ok := ctx.Get("auth_user"); ok {
+			// 替换HTTP头
+			ctx.Request.Header.Set("Accept", "application/json; charset=utf-8")
+			ctx.Request.Header.Set("Content-Type", "application/json; charset=utf-8")
+
+			ctx.Request.Header.Set("X-Forwarded-Host", ctx.Request.Header.Get("Host"))
+			ctx.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", auth_token))
+			if len(org_id) > 0 {
+				ctx.Request.Header.Set("OpenAI-Organization", org_id)
 			}
 
-			// response to client
-			accpt_type := ctx.Request.Header.Get("Accept")
-			err_msg := "Access denied"
-			if strings.Contains(strings.ToLower(accpt_type), "application/json") {
-				http.Error(ctx.Writer, fmt.Sprintf(`{"code" : %d, "msg" : "%s"}`, http.StatusForbidden, err_msg), http.StatusForbidden)
-			} else {
-				http.Error(ctx.Writer, err_msg, http.StatusForbidden)
-			}
-			return
+			ctx.Request.Host = target.Host
+
+			proxy.ServeHTTP(ctx.Writer, ctx.Request)
+		} else {
+			h.ResponseRaw(ctx, config.Text("error_invalid_access_denied"), ERR_INVALID_TOKEN, nil, http.StatusUnauthorized)
 		}
-
-		ctx.Request.Header.Del(config.PROXY_TOKEN_NAME)
-
-		// 替换HTTP头
-		ctx.Request.Header.Set("Accept", "application/json; charset=utf-8")
-		ctx.Request.Header.Set("Content-Type", "application/json; charset=utf-8")
-
-		ctx.Request.Header.Set("X-Forwarded-Host", ctx.Request.Header.Get("Host"))
-		ctx.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", auth_token))
-		if len(org_id) > 0 {
-			ctx.Request.Header.Set("OpenAI-Organization", org_id)
-		}
-
-		ctx.Request.Host = target.Host
-
-		proxy.ServeHTTP(ctx.Writer, ctx.Request)
 	}
 }
 
 // 无法路由
 func (h *APIHandler) noRouteHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		log.Error("404 : 无法路由")
-
-		ctx.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": "404 page not found"})
+		msg := config.Text("error_invalid_url")
+		log.Error(msg)
+		ctx.JSON(http.StatusNotFound, gin.H{"code": "PAGE_NOT_FOUND", "message": msg})
 	}
 }
 
 // 不支持的HTTP方法
 func (h *APIHandler) noMethodHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		log.Error("405 : 不支持的HTTP方法")
-
-		ctx.JSON(http.StatusMethodNotAllowed, gin.H{"code": "METHOD_NOT_ALLOWED", "message": "405 method not allowed"})
+		msg := config.Text("error_invalid_http_method")
+		log.Error(msg)
+		ctx.JSON(http.StatusMethodNotAllowed, gin.H{"code": "METHOD_NOT_ALLOWED", "message": msg})
 	}
 }
 
@@ -187,35 +188,145 @@ func (w bodyLogWriter) Write(b []byte) (int, error) {
 }
 
 // 错误处理中间件
-func (h *APIHandler) errorHandlerMiddleware() gin.HandlerFunc {
+func (h *APIHandler) authMiddleware() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
+		reqTime := time.Now()
+
+		// if necessary add sentry tracking first
 		if len(config.SvrConfig.Server.SentryDSN) > 0 {
 			defer utility.CloseSentry()
 		}
 
+		// 检查用户是否在白名单中
+		access_token := ctx.Request.Header.Get(config.PROXY_TOKEN_NAME)
+		if access_token == "" || !h.WhiteList.IsAccessTokenValid(access_token) {
+			// response to client
+			h.ResponseRaw(ctx, config.Text("error_invalid_access_denied"), ERR_INVALID_TOKEN, nil, http.StatusUnauthorized)
+			return
+		}
+		ctx.Request.Header.Del(config.PROXY_TOKEN_NAME)
+
+		// // add auth_user into context
+		// var user_id uint
+		// var err error
+		// if user_id, err = serverdb.GetUserIDByAccessToken(access_token); err != nil {
+		// 	// response to client
+		// 	h.ResponseRaw(ctx, config.Text("error_invalid_token"), ERR_INVALID_TOKEN, nil, http.StatusUnauthorized)
+		// 	return
+		// } else {
+		// 	if auth_user, err := serverdb.GetValidUser(user_id); err != nil {
+		// 		// response to client
+		// 		h.ResponseRaw(ctx, config.Text("error_invalid_token"), ERR_INVALID_TOKEN, nil, http.StatusUnauthorized)
+		// 		return
+		// 	} else {
+		// 		ctx.Set("auth_user", auth_user)
+		// 	}
+		// }
+
+		auth_user := h.WhiteList.GetUserInfoByToken(access_token)
+		if auth_user != nil {
+			ctx.Set("auth_user", auth_user)
+		} else {
+			h.ResponseRaw(ctx, config.Text("error_invalid_token"), ERR_INVALID_TOKEN, nil, http.StatusUnauthorized)
+		}
+
+		// copy request body
+		reqBody, _ := io.ReadAll(ctx.Request.Body)
+		// And now set a new body, which will simulate the same data we read:
+		ctx.Request.Body = io.NopCloser(bytes.NewBuffer(reqBody))
+
 		// 处理请求
-		blw := &bodyLogWriter{body: bytes.NewBufferString(""), ResponseWriter: ctx.Writer}
+		blw := &bodyLogWriter{
+			ResponseWriter: ctx.Writer,
+			body:           &bytes.Buffer{},
+		}
+
 		ctx.Writer = blw
 		if len(ctx.Errors) <= 0 {
 			ctx.Next()
 		}
 
 		// 检查是否有错误
-		if len(config.SvrConfig.Server.SentryDSN) > 0 {
-			errs := ctx.Errors.ByType(gin.ErrorTypeAny)
-			if len(errs) > 0 {
+		errs := ctx.Errors.ByType(gin.ErrorTypeAny)
+		if len(errs) > 0 {
+			var err_msg string
+			if len(config.SvrConfig.Server.SentryDSN) > 0 {
 				for _, e := range errs {
+					err_msg = err_msg + "\n" + e.Err.Error()
 					utility.CaptureException(fmt.Errorf("%v", e.Err))
 				}
 				utility.CaptureRequest(ctx.Request)
-				utility.ReportEvent(utility.EVT_SERVER_PROXY_FAILED, "请求处理出错 : "+ctx.Request.URL.String(), nil)
-			} else {
-				utility.CaptureRequest(ctx.Request)
-				utility.ReportEvent(utility.EVT_SERVER_PROXY_FAILED, "请求处理成功 : "+ctx.Request.URL.String(), nil)
-
-				log.Printf("Request: %s %s %s\n", ctx.Request.Method, ctx.Request.URL.String(), ctx.Request.Proto)
-				log.Printf("Response: %d %s\n", ctx.Writer.Status(), blw.body.String())
+				utility.ReportEvent(utility.EVT_SERVER_PROXY_FAILED, config.Text("error_request_failed")+" : "+ctx.Request.URL.String(), nil)
 			}
+			h.ResponseRaw(ctx, err_msg, ERR_UNKNOWN_FAILED, nil, http.StatusBadRequest)
+			return
+		}
+
+		if len(config.SvrConfig.Server.SentryDSN) > 0 {
+			utility.CaptureRequest(ctx.Request)
+			utility.ReportEvent(utility.EVT_SERVER_PROXY_FAILED, config.Text("error_request_success")+" : "+ctx.Request.URL.String(), nil)
+		}
+
+		// Refresh token and add back the app_token
+		if new_access_token, err := h.WhiteList.RefreshToken(access_token); err == nil {
+			ctx.Writer.Header().Set(config.PROXY_TOKEN_NAME, new_access_token)
+		} else {
+			log.Error("Failed to refresh access token on : " + access_token)
+		}
+
+		// write log into db
+		if EnableProxyLog {
+			reqHeaders, _ := json.Marshal(ctx.Request.Header)
+			rspHeaders, _ := json.Marshal(blw.Header())
+			plog := &serverdb.ProxyLog{
+				RemoteAddr:     ctx.ClientIP(),
+				UserID:         auth_user.UserID,
+				RequestTime:    reqTime,
+				RequestMethod:  ctx.Request.Method,
+				RequestURL:     ctx.Request.URL.String(),
+				RequestHeaders: string(reqHeaders),
+				RequestBody:    string(reqBody),
+
+				ResponseStatusCode: blw.Status(),
+				ResponseHeaders:    string(rspHeaders),
+				ResponseBody:       blw.body.String(),
+			}
+			plog.RecordRequest()
+		}
+
+		// You can also modify it before sending it out
+		if _, err := io.Copy(ctx.Writer, blw.body); err != nil {
+			log.Error("Failed to send out response: " + err.Error())
 		}
 	}
 }
+
+// log.Printf("Request: %s %s %s\n", ctx.Request.Method, ctx.Request.URL.String(), ctx.Request.Proto)
+// log.Printf("Response: %d %s\n", ctx.Writer.Status(), blw.body.String())
+
+// func headersToString(headers http.Header) string {
+// 	headersBytes, _ := json.Marshal(headers)
+// 	return string(headersBytes)
+// }
+
+// func bodyToString(req *http.Request) string {
+// 	bodyBytes, _ := ioutil.ReadAll(req.Body)
+// 	req.Body.Close()
+// 	req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+// 	return string(bodyBytes)
+// }
+
+// func (h *APIHandler) activateUser() gin.HandlerFunc {
+// 	return func(ctx *gin.Context) {
+// 		token := ctx.Param("token")
+// 		ctx.Writer.WriteHeader(http.StatusOK)
+// 		ctx.Writer.Write([]byte(config.GetPageActivate("/user/activated/" + token)))
+// 	}
+// }
+
+// func (h *APIHandler) completeActivation() gin.HandlerFunc {
+// 	return func(ctx *gin.Context) {
+// 		ctx.Writer.WriteHeader(http.StatusOK)
+// 		ctx.Writer.Write([]byte(config.GetPageActiviated()))
+// 	}
+// }
