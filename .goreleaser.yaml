@@ -25,14 +25,11 @@ builds:
       - CC=/home/runner/work/osxcross/target/bin/oa64-clang
       - CXX=/home/runner/work/osxcross/target/bin/oa64-clang++
     flags:
-      # - "-mod={{ .Env.MOD }}"
-      # - "-tags={{ .Env.BUILD_TAGS }}"
+      - "-mod=readonly"
       - -trimpath
-    ldflags:
-    - -s
-    #   - "{{ .Env.BUILD_VARS }}"
-    #   - "{{ .Env.STRIP_FLAGS }}"
-    #   - "-linkmode={{ .Env.LINKMODE }}"
+    ldflags: >
+      -linkmode external
+      -extldflags "-static"
 
   - id: client-linux-amd64
     main: ./cmd/client/main.go

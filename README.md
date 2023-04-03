@@ -6,6 +6,7 @@
 <div align="center">
   <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" width="20%" alt="Logo" />
 </div>
+
 [中文版](README_cn.md)
 
 X-Ally is an AI-powered TUI (Terminal User Interface) tool designed to streamline tasks. It seamlessly integrates with APIs from both [openai.com](https://openai.com/) and [deepl.com](https://www.deepl.com/), providing users with a more elegant solution.
@@ -118,7 +119,9 @@ Built-in commands include:
 | condif-email | use current user and email to register to current X-Ally Relay Server. Need email and Relay server endpoint |
 | q、88、886、bye、quit、exit | quit |
 
-> Note: The DeepL program here is manually modified after chatGPT generation. At present, there is no key on hand for the time being, so it has not been tested. Welcome feedback.
+> Note: 
+>
+> - The DeepL program here is manually modified after chatGPT generation. At present, there is no key on hand for the time being, so it has not been tested. Welcome feedback.
 
 
 
@@ -162,8 +165,9 @@ roles:																						# This section is used to define the various preset 
 
 ```
 > Note:
-> 1, By adjusting the configuration YAML file, you can choose to access the chatGPT original address directly or through a custom domain. This is exceptionally friendly for people in certain regions for well-known reasons. Combined with the centralized sharing model, it is very friendly for enterprises to import chatGPT capabilities.
-> 2、Prompt is the basis of AI application. For the specific role Prompt, please refer to various social networking sites and experience sharing sites.
+>
+> - By adjusting the configuration YAML file, you can choose to access the chatGPT original address directly or through a custom domain. This is exceptionally friendly for people in certain regions for well-known reasons. Combined with the centralized sharing model, it is very friendly for enterprises to import chatGPT capabilities.
+> - Prompt is the basis of AI application. For the specific role Prompt, please refer to various social networking sites and experience sharing sites.
 
 
 

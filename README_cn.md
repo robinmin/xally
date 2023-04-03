@@ -7,7 +7,7 @@
   <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" width="20%" alt="Logo" />
 </div>
 
- [English version](https://github.com/robinmin/xally/blob/main/README.md)
+[English version](README.md)
 
 X-Ally是一个命令行界面的AI集成工具，用于辅助基于文本文字的各项工作，包括程序员、作者、翻译者以及其他各类文本内容生产者。目前主要已集成 [openai.com](https://openai.com/)  chatGPT、 [deepl.com](https://www.deepl.com/)。后续会有更多自研、三方工具集成。
 
@@ -121,7 +121,9 @@ Options:
 | condif-email | 注册当前用户到指定X-All转发服务器. 用户需提供邮箱以及X-All转发服务器服务端点 |
 | q、88、886、bye、quit、exit | 退出程序 |
 
-> 备注：这里的DeepL程序是chatGPT生成后人工修改的。目前手上暂时无key，尚未实测。欢迎反馈
+> 备注：
+>
+> - 这里的DeepL程序是chatGPT生成后人工修改的。目前手上暂时无key，尚未实测。欢迎反馈
 
 
 
@@ -165,8 +167,9 @@ roles:																						# 本小节用于定义各种预置角色
 
 ```
 > 备注：
-> 1、通过调整配置YAML文件，可选择直接接入chatGPT原始地址，也可以通过自定义域名接入。由于众所周知的原因，这一点对于某些地区的人民异常友好。配合中心化共享模式，对于企业导入chatGPT能力来说，非常友好。
-> 2、Prompt是AI应用的基础。具体的角色Prompt, 可参考各社交网站、经验分享网站。
+>
+> - 通过调整配置YAML文件，可选择直接接入chatGPT原始地址，也可以通过自定义域名接入。由于众所周知的原因，这一点对于某些地区的人民异常友好。配合中心化共享模式，对于企业导入chatGPT能力来说，非常友好。
+> - Prompt是AI应用的基础。具体的角色Prompt, 可参考各社交网站、经验分享网站。
 
 
 
@@ -200,9 +203,9 @@ server:
 
 ```
 > 备注：
-> 1、配置xally_server启动完成后，需要从客户端xally首先使用`config-email`指令向该xally_server进行注册。完成注册后，会主动发送激活邮件到注册邮箱进行激活（若配置有direct_email_notify为true）。
->
-> 2、一旦激活完成即可通过xally_server使用chatGPT的各种能力。
+> 
+>- 配置xally_server启动完成后，需要从客户端xally首先使用`config-email`指令向该xally_server进行注册。完成注册后，会主动发送激活邮件到注册邮箱进行激活（若配置有direct_email_notify为true）。
+> - 一旦激活完成即可通过xally_server使用chatGPT的各种能力。
 
 
 
@@ -260,7 +263,9 @@ server:
 - v0.0.1 at 2023-03-04 : 项目POC
 
 
+
 #### 参考链接
+
 - [openai.com API Docs](https://platform.openai.com/docs/introduction/overview)
 - [How to publish your Go binary as Homebrew Formula with GoReleaser](https://franzramadhan.com/posts/8-how-to-publish-go-binary-to-homebrew/)
 - [Create a Custom CLI Tool and Distribute with HomeBrew Using Goreleaser and Github Actions](https://askcloudarchitech.com/posts/tutorials/create-homebrew-tap-golang-goreleaser-cobra-cli/)

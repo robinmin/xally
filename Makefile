@@ -29,11 +29,11 @@ init: ## Initialize project layout
 ## Build:
 build: ## Build your project and put the output binary in build/bin/
 	mkdir -p build/bin
-	GO111MODULE=on $(GOCMD) build -o build/bin/$(BINARY_NAME) ./cmd/client/main.go
+	GO111MODULE=on CGO_ENABLED=on $(GOCMD) build -o build/bin/$(BINARY_NAME) ./cmd/client/main.go
 	chmod u+x build/bin/$(BINARY_NAME)
 
-	GO111MODULE=on $(GOCMD) build -o build/bin/$(BINARY_NAME)-server ./cmd/server/main.go
-	chmod u+x build/bin/$(BINARY_NAME)-server
+	GO111MODULE=on CGO_ENABLED=on $(GOCMD) build -o build/bin/$(BINARY_NAME)_server ./cmd/server/main.go
+	chmod u+x build/bin/$(BINARY_NAME)_server
 
 release-check: ## check before release
 	goreleaser --snapshot --skip-publish --clean
