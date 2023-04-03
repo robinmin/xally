@@ -81,20 +81,20 @@ lint:  ## Run all available linters
 	go vet ./cmd/client/main.go
 	golangci-lint run -v ./cmd/client/main.go
 
-	# errcheck -ignoretests ./cmd/server/main.go
-	# go vet ./cmd/server/main.go
-	# golangci-lint run -v ./cmd/server/main.go
+	errcheck -ignoretests ./cmd/server/main.go
+	go vet ./cmd/server/main.go
+	golangci-lint run -v ./cmd/server/main.go
 
-codegen: ## generate source code from protobuf
-	# protoc \
-	# 	-I proto \
-	# 	-I vendor/protoc-gen-validate \
-	# 	--go_out=. \
-	# 	--go_opt=paths=source_relative \
-	# 	--go-grpc_out=. \
-	# 	--go-grpc_opt=paths=source_relative \
-	# 	$(find proto -name '*.proto')
-	buf generate
+# codegen: ## generate source code from protobuf
+# 	# protoc \
+# 	# 	-I proto \
+# 	# 	-I vendor/protoc-gen-validate \
+# 	# 	--go_out=. \
+# 	# 	--go_opt=paths=source_relative \
+# 	# 	--go-grpc_out=. \
+# 	# 	--go-grpc_opt=paths=source_relative \
+# 	# 	$(find proto -name '*.proto')
+# 	buf generate
 
 ## show all help information
 help: ## Show this help.
