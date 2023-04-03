@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.1.3)
+(v0.1.4)
 [TOC]
 
 <div align="center">
@@ -199,6 +199,10 @@ server:
       # target: https://api.openai.com/v1		# 反向代理配置实例之目标服务器地址(原始地址)
 
 ```
+> 备注：
+> 1、配置xally_server启动完成后，需要从客户端xally首先使用`config-email`指令向该xally_server进行注册。完成注册后，会主动发送激活邮件到注册邮箱进行激活（若配置有direct_email_notify为true）。
+>
+> 2、一旦激活完成即可通过xally_server使用chatGPT的各种能力。
 
 
 

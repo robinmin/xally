@@ -1,15 +1,14 @@
 # X-Ally
 
-(v0.1.3)
+(v0.1.4)
 [TOC]
 
 <div align="center">
   <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" width="20%" alt="Logo" />
 </div>
-[中文版](https://github.com/robinmin/xally/blob/main/README_cn.md)
+[中文版](README_cn.md)
 
-X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly. So far it has been integrated with the APIs from [openai.com](https://openai.com/) and [deepl.com](https://www.deepl.com/). 
-
+X-Ally is an AI-powered TUI (Terminal User Interface) tool designed to streamline tasks. It seamlessly integrates with APIs from both [openai.com](https://openai.com/) and [deepl.com](https://www.deepl.com/), providing users with a more elegant solution.
 
 #### Installation
 There are serveral ways to install X-Ally. On macOS/Linux you can install it via [HomeBrew](https://brew.sh/) as shown below:
@@ -197,7 +196,9 @@ server:
       target: https://api.openai.com/v1		# Reverse proxy configuration example of the target server address (original address)
 
 ```
-
+> Note:
+> 1、After finished the configuration of xally_server, you need to register with the xally_server from client xally first using the `config-email` command. After the registration is completed, an activation email will be sent to the registered email address for activation (if the configuration has direct_email_notify as true).
+> 2. Once the activation is complete, you can use the various capabilities of chatGPT through xally_server.
 
 
 #### Tips for using

@@ -12,7 +12,7 @@ builds:
     main: ./cmd/client/main.go
     binary: xally
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - darwin
       - linux
@@ -31,7 +31,7 @@ builds:
     main: ./cmd/server/main.go
     binary: xally_server
     env:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     goos:
       - darwin
       - linux
