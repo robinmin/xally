@@ -268,4 +268,4 @@ Emacs-like shortcuts are used by default to facilitate accelerated typing, inclu
 - [The Go libraries that never failed us: 22 libraries you need to know](https://threedots.tech/post/list-of-recommended-libraries/#useful-tools)
 - [html-to-markdown](https://github.com/JohannesKaufmann/html-to-markdown)
 - [How to cross compile with CGO using GoReleaser and GitHub Actions](https://www.bytebase.com/blog/how-to-cross-compile-with-cgo-use-goreleaser-and-github-action)
-
+- [goreleaser-cross-example](https://github.com/goreleaser/goreleaser-cross-example/blob/master/Makefile)
