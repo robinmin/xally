@@ -1,38 +1,47 @@
 # X-Ally
 
-(v0.1.2)
+(v0.1.3)
 [TOC]
 
 <div align="center">
   <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" width="20%" alt="Logo" />
 </div>
 
+ [English version](https://github.com/robinmin/xally/blob/main/README.md)
 
-X-Ally是一个命令行界面的AI集成工具，用于辅助基于文本文字的各项工作，包括程序员、作者、翻译者以及其他各类文本内容生产者。目前主要已集成 [openai.com](https://openai.com/)  chatGPT、 [deepl.com](https://www.deepl.com/)。后续会有更多自研、三方工具集成。 [English version](https://github.com/robinmin/xally/blob/main/README.md).
-
+X-Ally是一个命令行界面的AI集成工具，用于辅助基于文本文字的各项工作，包括程序员、作者、翻译者以及其他各类文本内容生产者。目前主要已集成 [openai.com](https://openai.com/)  chatGPT、 [deepl.com](https://www.deepl.com/)。后续会有更多自研、三方工具集成。
 
 
 #### 安装
 
-  目前支持集中种安装模式：macOS/Linux上基于`brew`进行安装：
+  目前支持集几种安装模式：macOS/Linux上基于`brew`进行安装：
   ```bash
   # 仅仅首次需要添加tap
   brew tap robinmin/tap
+  
   # 安装
   brew install xally
+  
   # 版本更新
   brew upgrade xally
   ```
-  或者直接从源代码安装：
+
+  如果使用Windows系统，也可以通过[Scoop](https://scoop.sh/) 直接安装:
+```bash
+scoop bucket add robinmin https://github.com/robinmin/scoop-bucket.git
+scoop install robinmin/xally
+```
+
+
+  或者你也可以直接到[github下载页面](https://github.com/robinmin/xally/releases/))下载。当然也可以直接下载源代码、自行编译：
   ```bash
   # via source code
   go get -u github.com/robinmin/xally
+  make build
   ```
-  当然，你也可以直接到[这里](https://github.com/robinmin/xally/releases/))下载。
 
 
-
-#### 当前特征
+#### 当前特性
 
 - 多模式接入，包括本地单机模式、中心化共享模式。
   - `本地单机模式`：直接链接chapGPT原始地址或者自建可靠中转地址（需本地持有chatGPT访问token、配置在环境变量`OPENAI_API_KEY`中或者启动`xally`时候指定）。

@@ -1,32 +1,41 @@
 # X-Ally
 
-(v0.1.2)
+(v0.1.3)
 [TOC]
 
 <div align="center">
   <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" width="20%" alt="Logo" />
 </div>
+[中文版](https://github.com/robinmin/xally/blob/main/README_cn.md)
 
-X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly. So far it has been integrated with the APIs from [openai.com](https://openai.com/) and [deepl.com](https://www.deepl.com/). [中文版](https://github.com/robinmin/xally/blob/main/README_cn.md).
+X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly. So far it has been integrated with the APIs from [openai.com](https://openai.com/) and [deepl.com](https://www.deepl.com/). 
 
 
 #### Installation
-So far, you can install X-Ally in three ways：using `brew` on macOS/Linux as shown below：
+There are serveral ways to install X-Ally. On macOS/Linux you can install it via [HomeBrew](https://brew.sh/) as shown below:
 ```bash
 # add tap, only for the first time
 brew tap robinmin/tap
+
 # install
 brew install xally
+
 # upgrade new version
 brew upgrade xally
 ```
 
-Meanwhile, you can download it from [here](https://github.com/robinmin/xally/releases/)).
+You also can install it via [Scoop](https://scoop.sh/) on Windows as shown below:
+```bash
+scoop bucket add robinmin https://github.com/robinmin/scoop-bucket.git
+scoop install robinmin/xally
+```
 
-Of course, you download the source code and comiple it in yourself.
+Meanwhile, you can download it directly from [github download](https://github.com/robinmin/xally/releases/). Or, you can download the source code and comiple it by yourself.
+
 ```bash
 # via source code
 go get -u github.com/robinmin/xally
+make build
 ```
 
 
