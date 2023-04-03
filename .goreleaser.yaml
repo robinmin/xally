@@ -1,6 +1,9 @@
 # This is an example .goreleaser.yml file with some sensible defaults.
 # Make sure to check the documentation at https://goreleaser.com
 project_name: xally
+env:
+  - GO111MODULE=on
+  - CGO_ENABLED=1
 before:
   hooks:
     # You may remove this if you don't use go modules.
@@ -8,55 +11,103 @@ before:
     # you may remove this if you don't need go generate
     # - go generate ./...
 builds:
-  - id: linux-client
+  - id: client-darwin-amd64
     main: ./cmd/client/main.go
     binary: xally
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - linux
     goarch:
       - amd64
-      - arm64
-    ignore:
-    - goos: linux
-      goarch: "386"
-
-  - id: darwin-client
-    main: ./cmd/client/main.go
-    binary: xally
-    env:
-      - CGO_ENABLED=1
-      - CC=/home/runner/work/osxcross/target/bin/o64-clang
-      - CXX=/home/runner/work/osxcross/target/bin/o64-clang++
     goos:
       - darwin
-    goarch:
-      - amd64
-      - arm64
-    ignore:
-    - goos: darwin
-      goarch: "386"
-    ldflags:
-    - -s
-    - -w
-    - -X main.version={{.Version}}
-    - -X main.commit={{.Commit}}
-    - -X main.date={{.Date}}
+    env:
+      - CC=o64-clang
+      - CXX=o64-clang++
+    flags:
+      # - "-mod={{ .Env.MOD }}"
+      # - "-tags={{ .Env.BUILD_TAGS }}"
+      - -trimpath
+    # ldflags:
+      # - "{{ .Env.BUILD_VARS }}"
+      # - "{{ .Env.STRIP_FLAGS }}"
+      # - "-linkmode={{ .Env.LINKMODE }}"
 
-  - id: windows-client
+  - id: client-darwin-arm64
+    main: ./cmd/client/main.go
+    binary: xally
+    goarch:
+      - arm64
+    goos:
+      - darwin
+    env:
+      - CC=oa64-clang
+      - CXX=oa64-clang++
+    flags:
+      # - "-mod={{ .Env.MOD }}"
+      # - "-tags={{ .Env.BUILD_TAGS }}"
+      - -trimpath
+    # ldflags:
+    #   - "{{ .Env.BUILD_VARS }}"
+    #   - "{{ .Env.STRIP_FLAGS }}"
+    #   - "-linkmode={{ .Env.LINKMODE }}"
+
+  - id: client-linux-amd64
     main: ./cmd/client/main.go
     binary: xally
     env:
-      - CGO_ENABLED=1
-    goos:
-      - windows
+      - CC=x86_64-linux-gnu-gcc
+      - CXX=x86_64-linux-gnu-g++
     goarch:
       - amd64
+    goos:
+      - linux
+    flags:
+      # - "-mod={{ .Env.MOD }}"
+      # - "-tags={{ .Env.BUILD_TAGS }}"
+      - -trimpath
+    ldflags:
+      # - "{{ .Env.BUILD_VARS }}"
+      # - "{{ .Env.STRIP_FLAGS }}"
+      # - "-linkmode={{ .Env.LINKMODE }}"
+      - -extldflags "-lc -lrt -lpthread --static"
+
+  - id: client-linux-arm64
+    main: ./cmd/client/main.go
+    binary: xally
+    goarch:
       - arm64
-    ignore:
-    - goos: windows
-      goarch: "386"
+    goos:
+      - linux
+    env:
+      - CC=aarch64-linux-gnu-gcc
+      - CXX=aarch64-linux-gnu-g++
+    flags:
+      # - "-mod={{ .Env.MOD }}"
+      # - "-tags={{ .Env.BUILD_TAGS }}"
+      - -trimpath
+    ldflags:
+      # - "{{ .Env.BUILD_VARS }}"
+      # - "{{ .Env.STRIP_FLAGS }}"
+      # - "-linkmode={{ .Env.LINKMODE }}"
+      - -extldflags "-lc -lrt -lpthread --static"
+
+  - id: client-windows-amd64
+    main: ./cmd/client/main.go
+    binary: xally
+    goarch:
+      - amd64
+    goos:
+      - windows
+    env:
+      - CC=x86_64-w64-mingw32-gcc
+      - CXX=x86_64-w64-mingw32-g++
+    flags:
+      # - "-mod={{ .Env.MOD }}"
+      # - "-tags={{ .Env.BUILD_TAGS }}"
+      - -trimpath
+      - -buildmode=exe
+    # ldflags:
+    #   - "{{ .Env.BUILD_VARS }}"
+    #   - "{{ .Env.STRIP_FLAGS }}"
+    #   - "-linkmode={{ .Env.LINKMODE }}"
 
   - id: server
     main: ./cmd/server/main.go
