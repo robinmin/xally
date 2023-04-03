@@ -13,6 +13,8 @@ builds:
     binary: xally
     env:
       - CGO_ENABLED=1
+      - CC=/home/runner/work/osxcross/target/bin/o64-clang
+      - CXX=/home/runner/work/osxcross/target/bin/o64-clang++
     goos:
       - darwin
       - linux
@@ -31,7 +33,7 @@ builds:
     main: ./cmd/server/main.go
     binary: xally_server
     env:
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
     goos:
       - darwin
       - linux
@@ -71,26 +73,6 @@ archives:
       - LICENSE*
       - README*
       - CHANGELOG*
-
-  # - id: server
-  #   format: tar.gz
-  #   rlcp: true
-  #   # this name template makes the OS and Arch compatible with the results of uname.
-  #   name_template: >-
-  #     {{ .ProjectName }}_svr_
-  #     {{- title .Os }}_
-  #     {{- if eq .Arch "amd64" }}x86_64
-  #     {{- else if eq .Arch "386" }}i386
-  #     {{- else }}{{ .Arch }}{{ end }}
-  #     {{- if .Arm }}v{{ .Arm }}{{ end }}
-  #   # use zip for windows archives
-  #   format_overrides:
-  #   - goos: windows
-  #     format: zip
-  #   files:
-  #     - LICENSE*
-  #     - README*
-  #     - CHANGELOG*
 
 checksum:
   name_template: 'checksums.txt'
