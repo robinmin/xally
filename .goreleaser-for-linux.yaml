@@ -13,20 +13,15 @@ builds:
     env:
       - VERSION="0.1.4"
       - GO_VERSION="1.20.1"
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
       - GIT_COMMIT="unknown"
       - BUILD_TIME="unknown"
       - BUILD_USER="unknown"
     goos:
       - linux
-    # We currently cannot run mysqlbinlog on arm64.
     goarch:
       - amd64
-    overrides:
-      - goos: linux
-        goarch: amd64
-        env:
-          - CC=gcc
+      - arm64
 
   - id: client
     main: ./cmd/client/main.go
@@ -44,14 +39,18 @@ builds:
       - BUILD_USER="unknown"
     goos:
       - linux
-    # We currently cannot run mysqlbinlog on arm64.
     goarch:
       - amd64
+      - arm64
     overrides:
       - goos: linux
         goarch: amd64
         env:
           - CC=gcc
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=arm-linux-gnueabihf-gcc
 
 archives:
   - replacements:
