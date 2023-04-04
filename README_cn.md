@@ -275,3 +275,4 @@ server:
 - [The Go libraries that never failed us: 22 libraries you need to know](https://threedots.tech/post/list-of-recommended-libraries/#useful-tools)
 - [html-to-markdown](https://github.com/JohannesKaufmann/html-to-markdown)
 - [How to cross compile with CGO using GoReleaser and GitHub Actions](https://www.bytebase.com/blog/how-to-cross-compile-with-cgo-use-goreleaser-and-github-action)
+- [Cross-compiling a CGO project using Goreleaser](https://www.jvt.me/posts/2023/02/24/goreleaser-cgo-cross-compile/)

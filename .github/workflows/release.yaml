@@ -1,47 +1,143 @@
-name: Release
+name: Build release artifacts and draft release
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
 
-permissions:
-  contents: write
-  packages: write
-
 jobs:
-  goreleaser:
+  build-linux-binary:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      # - run: git fetch --force --tags
-      - run: git fetch --prune --unshallow
-      - name: Setup dependencies
-        uses: actions/setup-go@v4
+      - run: git fetch --force --tags
+      - uses: actions/setup-go@v4
         with:
-          go-version: '1.20.x'
+          go-version: 1.20.1
+          check-latest: true
           cache: true
-      - name: release dry run
-        run: make release-dry-run
-      - name: setup release environment
-        run: |-
-          echo 'GITHUB_TOKEN=${{secrets.PBLSH_TOKEN}}' > .release-env
-      - name: release publish
-        run: make release
-      # - name: OSXCross for CGO Support
-      #   run: |
-      #     mkdir ../../osxcross
-      #     git clone https://github.com/plentico/osxcross-target.git ../../osxcross/target
-      # - name: Release
-      #   uses: goreleaser/goreleaser-action@v4
-      #   with:
-      #     distribution: goreleaser
-      #     version: latest
-      #     args: release --clean
-      #   env:
-      #     # Custom secret here since we need to access to robinmin/homebrew-tap and robinmin/scoop-bucket repo.
-      #     GITHUB_TOKEN: ${{ secrets.PBLSH_TOKEN }}
-      #     SCOOP_TOKEN: ${{ secrets.PBLSH_TOKEN }}
+      - name: Build
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --skip-publish --config .goreleaser-for-linux.yaml
+        env:
+          # Custom secret here since we need to access to robinmin/homebrew-tap and robinmin/scoop-bucket repo.
+          GITHUB_TOKEN: ${{ secrets.PBLSH_TOKEN }}
+          SCOOP_TOKEN: ${{ secrets.PBLSH_TOKEN }}
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: xally-linux
+          path: dist/xally*
+
+  build-darwin-binary:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - run: git fetch --force --tags
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.1
+          check-latest: true
+          cache: true
+      - name: Build
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --skip-publish --config .goreleaser-for-darwin.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.PBLSH_TOKEN }}
+          SCOOP_TOKEN: ${{ secrets.PBLSH_TOKEN }}
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: xally-darwin
+          path: dist/xally*
+
+  build-wind-binary:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - run: git fetch --force --tags
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.1
+          check-latest: true
+          cache: true
+      - name: Build
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          distribution: goreleaser
+          version: latest
+          args: release --skip-publish --config .goreleaser-for-wind.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.PBLSH_TOKEN }}
+          SCOOP_TOKEN: ${{ secrets.PBLSH_TOKEN }}
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: xally-wind
+          path: dist/xally*
+
+  draft-release:
+    needs: [build-linux-binary, build-darwin-binary, build-wind-binary]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - run: git fetch --force --tags
+      - uses: actions/setup-go@v4
+        with:
+          go-version: 1.20.1
+          check-latest: true
+          cache: true
+      - name: Make directories
+        run: |
+          mkdir -p ./xally-build/linux
+          mkdir -p ./xally-build/darwin
+          mkdir -p ./xally-build/wind
+      - name: Download linux binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: xally-linux
+          path: ./xally-build/linux
+      - name: Download darwin binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: xally-darwin
+          path: ./xally-build/darwin
+      - name: Download windows binaries
+        uses: actions/download-artifact@v3
+        with:
+          name: xally-wind
+          path: ./xally-build/wind
+      - name: Merge checksum file
+        run: |
+          cd ./xally-build
+          cat ./darwin/xally*checksums.txt >> checksums.txt
+          cat ./linux/xally*checksums.txt >> checksums.txt
+          cat ./wind/xally*checksums.txt >> checksums.txt
+          rm ./wind/xally*checksums.txt
+          rm ./darwin/xally*checksums.txt
+          rm ./linux/xally*checksums.txt
+      - name: Release
+        uses: goreleaser/goreleaser-action@v4
+        with:
+          args: release --config .goreleaser.yaml
+        env:
+          GITHUB_TOKEN: ${{ secrets.PBLSH_TOKEN }}
+          SCOOP_TOKEN: ${{ secrets.PBLSH_TOKEN }}

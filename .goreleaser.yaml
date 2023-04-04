@@ -1,261 +1,34 @@
-# This is an example .goreleaser.yml file with some sensible defaults.
-# Make sure to check the documentation at https://goreleaser.com
-project_name: xally
-env:
-  - GO111MODULE=on
-  - CGO_ENABLED=on
-before:
-  hooks:
-    # You may remove this if you don't use go modules.
-    - go mod tidy
-    # you may remove this if you don't need go generate
-    # - go generate ./...
+project_name: release-xally
+
 builds:
-  # - id: client-darwin
-  #   main: ./cmd/client/main.go
-  #   binary: xally
-  #   # goarch:
-  #   #   - arm64
-  #   goos:
-  #     - darwin
-  #   ignore:
-  #   - goos: darwin
-  #     goarch: "386"
-  #   env:
-  #     - CC=/home/runner/work/osxcross/target/bin/oa64-clang
-  #     - CXX=/home/runner/work/osxcross/target/bin/oa64-clang++
-  #     - OSXCROSS_NO_INCLUDE_PATH_WARNINGS=1
-  #     - OSXCROSS_PKG_CONFIG_ALL_STATIC=1
-  #     - PKG_CONFIG_ALLOW_CROSS=1
-  #     - PKG_CONFIG_PATH=/home/runner/work/osxcross/target/bin
-  #   flags:
-  #     - "-mod=readonly"
-  #     - -trimpath
-  #   ldflags: >
-  #       -linkmode external
-  #       -extldflags "-static"
+  - skip: true
 
-  # - id: client-linux-amd64
-  #   main: ./cmd/client/main.go
-  #   binary: xally
-  #   env:
-  #     - CC=x86_64-linux-gnu-gcc
-  #     - CXX=x86_64-linux-gnu-g++
-  #   goarch:
-  #     - amd64
-  #   goos:
-  #     - linux
-  #   flags:
-  #     # - "-mod={{ .Env.MOD }}"
-  #     # - "-tags={{ .Env.BUILD_TAGS }}"
-  #     - -trimpath
-  #   ldflags:
-  #     # - "{{ .Env.BUILD_VARS }}"
-  #     # - "{{ .Env.STRIP_FLAGS }}"
-  #     # - "-linkmode={{ .Env.LINKMODE }}"
-  #     - -extldflags "-lc -lrt -lpthread --static"
-
-  # - id: client-linux-arm64
-  #   main: ./cmd/client/main.go
-  #   binary: xally
-  #   goarch:
-  #     - arm64
-  #   goos:
-  #     - linux
-  #   env:
-  #     - CC=aarch64-linux-gnu-gcc
-  #     - CXX=aarch64-linux-gnu-g++
-  #   flags:
-  #     # - "-mod={{ .Env.MOD }}"
-  #     # - "-tags={{ .Env.BUILD_TAGS }}"
-  #     - -trimpath
-  #   ldflags:
-  #     # - "{{ .Env.BUILD_VARS }}"
-  #     # - "{{ .Env.STRIP_FLAGS }}"
-  #     # - "-linkmode={{ .Env.LINKMODE }}"
-  #     - -extldflags "-lc -lrt -lpthread --static"
-
-  # - id: client-windows-amd64
-  #   main: ./cmd/client/main.go
-  #   binary: xally
-  #   goarch:
-  #     - amd64
-  #   goos:
-  #     - windows
-  #   env:
-  #     - CC=x86_64-w64-mingw32-gcc
-  #     - CXX=x86_64-w64-mingw32-g++
-  #   flags:
-  #     # - "-mod={{ .Env.MOD }}"
-  #     # - "-tags={{ .Env.BUILD_TAGS }}"
-  #     - -trimpath
-  #     - -buildmode=exe
-  #   # ldflags:
-  #   #   - "{{ .Env.BUILD_VARS }}"
-  #   #   - "{{ .Env.STRIP_FLAGS }}"
-  #   #   - "-linkmode={{ .Env.LINKMODE }}"
-
-  - id: client-darwin-amd64
-    main: ./cmd/client/main.go
-    binary: xally
-    goarch:
-      - amd64
-    goos:
-      - darwin
-    env:
-      - CC=o64-clang
-      - CXX=o64-clang++
-    flags:
-      - -trimpath
-
-  - id: client-darwin-arm64
-    main: ./cmd/client/main.go
-    binary: xally
-    goarch:
-      - arm64
-    goos:
-      - darwin
-    env:
-      - CC=oa64-clang
-      - CXX=oa64-clang++
-    flags:
-      - -trimpath
-
-  - id: client-linux-amd64
-    main: ./cmd/client/main.go
-    binary: xally
-    env:
-      - CC=x86_64-linux-gnu-gcc
-      - CXX=x86_64-linux-gnu-g++
-    goarch:
-      - amd64
-    goos:
-      - linux
-    flags:
-      - -trimpath
-    ldflags:
-      - -extldflags "-lc -lrt -lpthread --static"
-
-  - id: client-linux-arm64
-    main: ./cmd/client/main.go
-    binary: xally
-    goarch:
-      - arm64
-    goos:
-      - linux
-    env:
-      - CC=aarch64-linux-gnu-gcc
-      - CXX=aarch64-linux-gnu-g++
-    flags:
-      - -trimpath
-    ldflags:
-      - -extldflags "-lc -lrt -lpthread --static"
-      
-  - id: client-windows-amd64
-    main: ./cmd/client/main.go
-    binary: xally
-    goarch:
-      - amd64
-    goos:
-      - windows
-    env:
-      - CC=x86_64-w64-mingw32-gcc
-      - CXX=x86_64-w64-mingw32-g++
-    flags:
-      - -trimpath
-      - -buildmode=exe
-
-  - id: server
-    main: ./cmd/server/main.go
-    binary: xally_server
-    env:
-      - CGO_ENABLED=1
-    goos:
-      - darwin
-      - linux
-      - windows
-    goarch:
-      - amd64
-      - arm64
-    ldflags:
-      - -s
-      - -w
-      - -X main.version={{.Version}}
-      - -X main.commit={{.Commit}}
-      - -X main.date={{.Date}}
-
-release:
-  prerelease: auto
-
-universal_binaries:
-  - id: client-darwin-universal
-    ids:
-      - client-darwin-amd64
-      - client-darwin-arm64
-    replace: true
-    name_template: "xally"
-
-archives:
-  - id: w/version
-    builds:
-      - client-darwin-universal
-      - client-linux-amd64
-      - client-linux-arm64
-      - client-windows-amd64
-      - server
-    name_template: "xally_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: false
-    format: zip
-    files:
-      - LICENSE*
-      - README*
-      - CHANGELOG*
-
-  - id: wo/version
-    builds:
-      - client-darwin-universal
-      - client-linux-amd64
-      - client-linux-arm64
-      - client-windows-amd64
-      - server
-    name_template: "xally_{{ .Os }}_{{ .Arch }}"
-    wrap_in_directory: false
-    format: zip
-    files:
-      - LICENSE*
-      - README*
-      - CHANGELOG*
-
-  # - id: xally-archive
-  #   format: tar.gz
-  #   rlcp: true
-  #   # this name template makes the OS and Arch compatible with the results of uname.
-  #   name_template: >-
-  #     {{ .ProjectName }}_
-  #     {{- title .Os }}_
-  #     {{- if eq .Arch "amd64" }}x86_64
-  #     {{- else if eq .Arch "386" }}i386
-  #     {{- else }}{{ .Arch }}{{ end }}
-  #     {{- if .Arm }}v{{ .Arm }}{{ end }}
-  #   # use zip for windows archives
-  #   format_overrides:
-  #   - goos: windows
-  #     format: zip
-  #   files:
-  #     - LICENSE*
-  #     - README*
-  #     - CHANGELOG*
-
-checksum:
-  name_template: 'checksums.txt'
-snapshot:
-  name_template: "{{ incpatch .Version }}-next"
 changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^docs:"
+      - "^test:"
+
+release:
+  draft: true
+  mode: append
+  extra_files:
+    - glob: ./xally-build/**/*
+    - glob: ./xally-build/checksums.txt
+  name_template: "Release {{.Tag}}"
+  header: |
+    # What's Changed
+
+    ## 🚀 Features
+
+    ## 🎄 Enhancements
+
+    ## 🎠 Community
+
+    ## New Contributors
+
+    ## Code Diff
 
 brews:
 - ids:
@@ -284,8 +57,3 @@ scoop:
   description: >-
     X-Ally is an AI-based TUI (aka Terminal User Interface) tool that helps people do things more elegantly.
   license: GPL-3.
-
-# The lines beneath this are called `modelines`. See `:help modeline`
-# Feel free to remove those if you don't want/use them.
-# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
-# vim: set ts=2 sw=2 tw=0 fo=cnqoj

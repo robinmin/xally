@@ -1,0 +1,73 @@
+project_name: build-xally-linux
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - id: server
+    main: ./cmd/server/main.go
+    binary: xally_server
+    ldflags:
+      - -w -s
+    tags:
+      - release
+    env:
+      - VERSION="0.1.4"
+      - GO_VERSION="1.20.1"
+      - CGO_ENABLED=1
+      - GIT_COMMIT="unknown"
+      - BUILD_TIME="unknown"
+      - BUILD_USER="unknown"
+    goos:
+      - linux
+    # We currently cannot run mysqlbinlog on arm64.
+    goarch:
+      - amd64
+    overrides:
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=gcc
+
+  - id: client
+    main: ./cmd/client/main.go
+    binary: xally
+    ldflags:
+      - -w -s
+    tags:
+      - release
+    env:
+      - VERSION="0.1.4"
+      - GO_VERSION="1.20.1"
+      - CGO_ENABLED=1
+      - GIT_COMMIT="unknown"
+      - BUILD_TIME="unknown"
+      - BUILD_USER="unknown"
+    goos:
+      - linux
+    # We currently cannot run mysqlbinlog on arm64.
+    goarch:
+      - amd64
+    overrides:
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=gcc
+
+archives:
+  - replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      amd64: x86_64
+    builds:
+      - server
+      - client
+    name_template: "xally_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    wrap_in_directory: false
+    format: zip
+    files:
+      - LICENSE*
+      - README*
+      - CHANGELOG*
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
