@@ -23,7 +23,7 @@ builds:
       - windows
     goarch:
       - amd64
-      - arm64
+      # - arm64
 
   - id: client
     main: ./cmd/client/main.go
@@ -43,7 +43,7 @@ builds:
       - windows
     goarch:
       - amd64
-      - arm64
+      # - arm64
     overrides:
       - goos: windows
         goarch: amd64
@@ -57,18 +57,18 @@ builds:
           - -trimpath
           - -mod=readonly
           - -buildmode=pie
-      - goos: windows
-        goarch: arm64
-        env:
-          - CC=arm-linux-gnueabihf-gcc
-          # - CXX=arm-linux-gnueabihf-g++
-        ldflags:
-          - -s
-          - -w
-        flags:
-          - -trimpath
-          - -mod=readonly
-          - -buildmode=pie
+      # - goos: windows
+      #   goarch: arm64
+      #   env:
+      #     - CC=arm-linux-gnueabihf-gcc
+      #     # - CXX=arm-linux-gnueabihf-g++
+      #   ldflags:
+      #     - -s
+      #     - -w
+      #   flags:
+      #     - -trimpath
+      #     - -mod=readonly
+      #     - -buildmode=pie
 
 archives:
   - replacements:
