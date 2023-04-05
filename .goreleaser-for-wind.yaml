@@ -55,8 +55,7 @@ builds:
           - -w
         flags:
           - -trimpath
-          - -mod=readonly
-          - -buildmode=pie
+          - -buildmode=exe
       # - goos: windows
       #   goarch: arm64
       #   env:
