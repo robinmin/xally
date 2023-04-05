@@ -53,6 +53,7 @@ builds:
         ldflags:
           - -s
           - -w
+          - -pthread
         flags:
           - -trimpath
           - -buildmode=exe
