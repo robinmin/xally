@@ -74,7 +74,7 @@ jobs:
           fetch-depth: 0
       - run: git fetch --force --tags
       - name: Install cross compiler for windows arm64
-        run: sudo apt-get install gcc-mingw-w64-x86-64 gcc-mingw-w64-arm64
+        run: sudo apt-get install mingw-w64 gcc-arm-linux-gnueabihf
       - uses: actions/setup-go@v4
         with:
           go-version: 1.20.1

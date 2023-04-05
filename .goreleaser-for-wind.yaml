@@ -60,8 +60,8 @@ builds:
       - goos: windows
         goarch: arm64
         env:
-          - CC=aarch64-w64-mingw32-gcc
-          # - CXX=aarch64-w64-mingw32-g++
+          - CC=arm-linux-gnueabihf-gcc
+          # - CXX=arm-linux-gnueabihf-g++
         ldflags:
           - -s
           - -w
