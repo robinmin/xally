@@ -6,7 +6,9 @@ import (
 	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/model"
 	log "github.com/sirupsen/logrus"
-	"gorm.io/driver/sqlite"
+
+	// "gorm.io/driver/sqlite" // // Sqlite driver based on GGO
+	"github.com/glebarez/sqlite" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )

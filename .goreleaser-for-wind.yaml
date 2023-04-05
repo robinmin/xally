@@ -23,7 +23,7 @@ builds:
       - windows
     goarch:
       - amd64
-      # - arm64
+      - arm64
 
   - id: client
     main: ./cmd/client/main.go
@@ -35,7 +35,7 @@ builds:
     env:
       - VERSION="0.1.4"
       - GO_VERSION="1.20.1"
-      - CGO_ENABLED=1
+      - CGO_ENABLED=0
       - GIT_COMMIT="unknown"
       - BUILD_TIME="unknown"
       - BUILD_USER="unknown"
@@ -43,32 +43,31 @@ builds:
       - windows
     goarch:
       - amd64
-      # - arm64
-    overrides:
-      - goos: windows
-        goarch: amd64
-        env:
-          - CC=x86_64-w64-mingw32-gcc
-          # - CXX=x86_64-w64-mingw32-g++
-        ldflags:
-          - -s
-          - -w
-          - -pthread
-        flags:
-          - -trimpath
-          - -buildmode=exe
-      # - goos: windows
-      #   goarch: arm64
-      #   env:
-      #     - CC=arm-linux-gnueabihf-gcc
-      #     # - CXX=arm-linux-gnueabihf-g++
-      #   ldflags:
-      #     - -s
-      #     - -w
-      #   flags:
-      #     - -trimpath
-      #     - -mod=readonly
-      #     - -buildmode=pie
+      - arm64
+    # overrides:
+    #   - goos: windows
+    #     goarch: amd64
+    #     env:
+    #       - CC=x86_64-w64-mingw32-gcc
+    #       # - CXX=x86_64-w64-mingw32-g++
+    #     ldflags:
+    #       - -s
+    #       - -w
+    #     flags:
+    #       - -trimpath
+    #       - -buildmode=exe
+    #   # - goos: windows
+    #   #   goarch: arm64
+    #   #   env:
+    #   #     - CC=arm-linux-gnueabihf-gcc
+    #   #     # - CXX=arm-linux-gnueabihf-g++
+    #   #   ldflags:
+    #   #     - -s
+    #   #     - -w
+    #   #   flags:
+    #   #     - -trimpath
+    #   #     - -mod=readonly
+    #   #     - -buildmode=pie
 
 archives:
   - replacements:
