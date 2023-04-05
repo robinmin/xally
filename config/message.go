@@ -43,6 +43,7 @@ var i18n_str_table = map[string]string{
 	"tips_suggestion_quit":         "退出本程序",
 	"tips_suggestion_reset":        "重置角色为：",
 	"tips_suggestion_cmd":          "执行本地命令，并将结果回显",
+	"tips_suggestion_clear":        "清除对话历史",
 	"tips_suggestion_config_email": "设置Email地址",
 	"tips_suggestion_ask":          "问ChatGPT",
 
@@ -115,6 +116,7 @@ Hello, I am your personal assistant %s, how can I help you?  [ %s ]
 	"tips_suggestion_quit":         "Exit",
 	"tips_suggestion_reset":        "Reset role to: ",
 	"tips_suggestion_cmd":          "Execute local commands and display the results",
+	"tips_suggestion_clear":        "Clear all conversation hiostory",
 	"tips_suggestion_config_email": "Config Email address",
 	"tips_suggestion_ask":          "Ask ChatGPT",
 
@@ -187,6 +189,7 @@ var i18n_str_table_jp = map[string]string{
 	"tips_suggestion_quit":         "終了する",
 	"tips_suggestion_reset":        "役割をリセットして：",
 	"tips_suggestion_cmd":          "ローカルコマンドを実行し、その結果を表示する",
+	"tips_suggestion_clear":        "対話履歴をクリアにする",
 	"tips_suggestion_config_email": "コンフィグ電子メール",
 	"tips_suggestion_ask":          "ChatGPTに問い合わせて",
 

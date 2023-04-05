@@ -23,7 +23,7 @@ func InitClientDB(db_name string, verbose bool) (*ClientDB, error) {
 
 	if verbose {
 		fmt.Println("Opening database : ", db_name)
-		if config.DebugMode {
+		if config.MyConfig.DebugMode() {
 			db_cfg = &gorm.Config{Logger: logger.Default.LogMode(logger.Info)}
 		} else {
 			db_cfg = &gorm.Config{}

@@ -11,10 +11,9 @@ import (
 
 // Real constants and can not be changed
 const AppName = "X-Ally"
-const Version = "0.1.0"
+const Version = "0.1.5"
 const MaxTokens = 4096
 const PROXY_TOKEN_NAME = "X-ALLY-TOKEN"
-const DebugMode = false
 
 type SysRole struct {
 	Name        string  `yaml:"name,omitempty"`
@@ -43,6 +42,8 @@ type SysSystem struct {
 	UseSharedMode uint32 `yaml:"use_shared_mode,omitempty"`
 	AppToken      string `yaml:"app_token,omitempty"`
 	Email         string `yaml:"email,omitempty"`
+
+	DebugMode bool `yaml:"debug_mode,omitempty"`
 }
 
 type SysConfig struct {
@@ -72,6 +73,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 			UseSharedMode: 0,
 			AppToken:      "",
 			Email:         "",
+			DebugMode:     false,
 		},
 		Roles: map[string]SysRole{
 			"expert": {
@@ -166,7 +168,7 @@ func (cfg *SysConfig) GetCurrentMode(connected bool) string {
 			flags = "🚧"
 		}
 	}
-	if DebugMode {
+	if cfg.DebugMode() {
 		flags = flags + "🐛"
 	}
 	return flags
@@ -215,4 +217,8 @@ func (cfg *SysConfig) UsingOriginalService() bool {
 		return true
 	}
 	return false
+}
+
+func (cfg *SysConfig) DebugMode() bool {
+	return cfg.System.DebugMode
 }

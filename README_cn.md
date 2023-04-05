@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.1.4)
+(v0.1.5)
 [TOC]
 
 <div align="center">
@@ -80,7 +80,7 @@ sequenceDiagram
 为方便用户日常使用，可使用`xally --help`命令快速查看主要命令行选项。以下是当前版本的输出：
 ```bash
 $ xally --help
-xally version: xally/0.1.0
+xally version: xally/0.1.5
 Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:

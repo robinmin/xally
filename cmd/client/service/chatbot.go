@@ -46,6 +46,9 @@ const (
 	// execute host command on local machine
 	Cmd
 
+	// clear all conversation history
+	Clear
+
 	// Config system setting
 	Config
 
@@ -94,8 +97,11 @@ func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
 		Cmd: {
 			{Text: "cmd", Description: config.Text("tips_suggestion_cmd")},
 		},
+		Clear: {
+			{Text: "clear", Description: config.Text("tips_suggestion_clear")},
+		},
 		Config: {
-			{Text: "config-email", Description: config.Text("tips_suggestion_cmd")},
+			{Text: "config-email", Description: config.Text("tips_suggestion_config_email")},
 		},
 		Reset: reset_rolese,
 		Quit: {
@@ -292,7 +298,7 @@ func (bot *ChatBot) getExecutor(dir string) func(string) {
 			msg, need_dump, err := bot.CommandProcessor(cmds, commandFields)
 			if err != nil {
 				log.Error(err.Error())
-				if config.DebugMode {
+				if config.MyConfig.DebugMode() {
 					bot.Say(err.Error(), false)
 					if len(msg) > 0 {
 						bot.Say(msg, need_dump)
@@ -352,6 +358,10 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 			role = config.MyConfig.System.DefaultRole
 		}
 		bot.resetRole(role, false)
+	case "clear", "cls":
+		log.Debug("Execute [clear / cls] command")
+
+		bot.resetRole(config.MyConfig.System.DefaultRole, true)
 	case "ask":
 		if len(original_msg) > len(arr_cmd[0]) {
 			log.Debug("Execute [ask] command on : ", original_msg)
@@ -596,7 +606,7 @@ func (bot *ChatBot) Ask(question string) bool {
 			bot.resetRole(bot.role.Name, true)
 			token_len = bot.estimateAvailableTokenNumber(len(question))
 
-			if config.DebugMode {
+			if config.MyConfig.DebugMode() {
 				fmt.Println("🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸 resetting role......")
 			}
 			break
@@ -605,7 +615,7 @@ func (bot *ChatBot) Ask(question string) bool {
 			size_before := len(bot.msg_history)
 			bot.msg_history = slices.Delete(bot.msg_history, init_msg_len, init_msg_len+1)
 
-			if config.DebugMode {
+			if config.MyConfig.DebugMode() {
 				fmt.Print("🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻 erasing old history......")
 				fmt.Printf("%d --> %d\n", size_before, len(bot.msg_history))
 			}
