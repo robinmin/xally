@@ -40,6 +40,8 @@ type ServerConfigItems struct {
 	SMTPPassword        string `yaml:"smtp_password"`
 	DirectEmailNotify   bool   `yaml:"direct_email_notify"`
 	EmailRestrictDomain string `yaml:"email_restrict_domain"`
+
+	DebugMode bool `yaml:"debug_mode,omitempty"`
 }
 
 type ServerConfig struct {
@@ -69,6 +71,10 @@ func (cfg *ServerConfig) LoadFromYAML(cfg_file string) error {
 		return err
 	}
 	return nil
+}
+
+func (cfg *ServerConfig) DebugMode() bool {
+	return cfg.Server.DebugMode
 }
 
 var SvrConfig *ServerConfig

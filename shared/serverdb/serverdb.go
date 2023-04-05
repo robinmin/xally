@@ -2,6 +2,7 @@ package serverdb
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/model"
 )
 
@@ -24,8 +26,12 @@ func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 	var db_cfg *gorm.Config
 
 	if verbose {
-		// fmt.Println("Opening database connection : ", connection_str)
-		db_cfg = &gorm.Config{Logger: logger.Default.LogMode(logger.Info)}
+		if config.SvrConfig.DebugMode() {
+			fmt.Println("Opening database connection : ", connection_str)
+			db_cfg = &gorm.Config{Logger: logger.Default.LogMode(logger.Info)}
+		} else {
+			db_cfg = &gorm.Config{}
+		}
 	} else {
 		db_cfg = &gorm.Config{}
 	}
@@ -44,14 +50,15 @@ func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 		// 设置字符集为utf8mb4
 		_db = _db.Set("gorm:table_options", "CHARSET=utf8mb4")
 
-		if err = _db.AutoMigrate(
-			&AuthUser{},
-			&UserToken{},
-			&ProxyLog{},
-		); err != nil {
-			log.Error(err)
+		if config.SvrConfig.DebugMode() {
+			if err = _db.AutoMigrate(
+				&AuthUser{},
+				&UserToken{},
+				&ProxyLog{},
+			); err != nil {
+				log.Error(err)
+			}
 		}
-		// log.Debug("TODO: migrate")
 	}
 
 	return _db, err
