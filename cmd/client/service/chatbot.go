@@ -373,10 +373,13 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 		}
 
 	case PLUGIN_NAME_FILE_CONTENT:
-		if len(original_msg) > len(arr_cmd[0]) {
+		if len(original_msg) > 3 {
 			log.Debug("Execute [file-content] command on : ", original_msg)
 
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
+			if need_quit := bot.Ask(original_msg); need_quit {
+				bot.Close(true)
+			}
 		}
 	case PLUGIN_NAME_FILE_SUMMARY:
 		fallthrough

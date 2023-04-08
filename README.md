@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.1.5)
+(v0.1.6)
 [TOC]
 
 <div align="center">
@@ -78,7 +78,7 @@ sequenceDiagram
 For daily use, you can use the `xally --help` command to quickly view the main command line options. The following is the output of the current version:
 ```bash
 $ xally --help
-xally version: xally/0.1.5
+xally version: xally/0.1.6
 Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:

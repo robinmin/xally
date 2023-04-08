@@ -128,7 +128,7 @@ func (plugin *FilePlugin) Execute(original_msg string, arr_cmd []string) (proces
 
 	var file_name string
 	var current_mode string
-	if len(arr_cmd) > 0 {
+	if len(arr_cmd) > 1 {
 		file_name = strings.Join(arr_cmd[1:], " ")
 		current_mode = arr_cmd[0]
 	} else {
@@ -140,8 +140,6 @@ func (plugin *FilePlugin) Execute(original_msg string, arr_cmd []string) (proces
 	if file_name == "" || plugin.mode != current_mode {
 		return
 	}
-	// stop bubble up
-	processed = true
 
 	if _, err = os.Stat(file_name); os.IsNotExist(err) {
 		log.Debug("It's not a file : ", file_name)
@@ -158,8 +156,14 @@ func (plugin *FilePlugin) Execute(original_msg string, arr_cmd []string) (proces
 		return
 	}
 
+	// stop bubble up
+	processed = true
 	replaced_msg = string(data)
-	replaced_cmd = append([]string{plugin.mode}, strings.Fields(replaced_msg)...)
+	if current_mode != PLUGIN_NAME_FILE_CONTENT {
+		replaced_cmd = append([]string{plugin.mode}, strings.Fields(replaced_msg)...)
+	} else {
+		replaced_cmd = append([]string{plugin.mode}, replaced_msg)
+	}
 	var prompt_msg string
 	switch current_mode {
 	case PLUGIN_NAME_FILE_SUMMARY:
@@ -174,7 +178,6 @@ func (plugin *FilePlugin) Execute(original_msg string, arr_cmd []string) (proces
 	if len(prompt_msg) > 0 {
 		replaced_msg = prompt_msg + "\n\n-------------------------\n" + replaced_msg
 	}
-
 	return
 }
 
