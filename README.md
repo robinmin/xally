@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.1.6)
+(v0.1.7)
 [TOC]
 
 <div align="center">
@@ -38,11 +38,22 @@ go get -u github.com/robinmin/xally
 make build
 ```
 
+#### How to use centralized sharing model
 
+If you are using the centralized sharing model, you will need to register in xally before using it for the first time with the following command:
+
+```bash
+## input the following command in xally
+config-email [your_email_address] [your_xally_server_address]
+```
+
+Please replace the above `your_email_address` with the real email address and `your_xally_server_address` with the xally_server service address (if you are a normal user, please contact your administrator).
+
+After completing the registration, an activation email will be sent to your email address, click the activation button in the activation email to activate your user. Once activated, you can go back to xally and use it normally.
 
 #### Features
 
-- Multi-mode access, including local stand-alone mode, centralized shared mode.
+- Multi-mode access, including local stand-alone mode, centralized sharing model.
   
   - `Local stand-alone mode`：Directly connect to the original chapGPT address or build your own reliable relay address (requires a local chatGPT access token, configured in the environment variable `OPENAI_API_KEY` or specified it in the YAML file).
 ```mermaid
@@ -51,7 +62,7 @@ sequenceDiagram
   x-ally->>openai.com: access chatGPT via original token
   openai.com->>x-ally: response the answers to the client
 ```
-  - `Centralized shared mode`：Through `xally_server` as a relay server (essentially a reverse proxy server), the ability to use chatGPT is open to specific groups (the server needs to hold the chatGPT access token). All the client needs to hold is the access token of `xally_server`, which is convenient for enterprises to control and manage the permissions after importing chatGPT.
+  - `Centralized sharing model`：Through `xally_server` as a relay server (essentially a reverse proxy server), the ability to use chatGPT is open to specific groups (the server needs to hold the chatGPT access token). All the client needs to hold is the access token of `xally_server`, which is convenient for enterprises to control and manage the permissions after importing chatGPT.
 ```mermaid
 %% xally with xally-server
 sequenceDiagram
@@ -78,7 +89,7 @@ sequenceDiagram
 For daily use, you can use the `xally --help` command to quickly view the main command line options. The following is the output of the current version:
 ```bash
 $ xally --help
-xally version: xally/0.1.6
+xally version: xally/0.1.7
 Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:
@@ -204,6 +215,25 @@ server:
 > 1、After finished the configuration of xally_server, you need to register with the xally_server from client xally first using the `config-email` command. After the registration is completed, an activation email will be sent to the registered email address for activation (if the configuration has direct_email_notify as true).
 > 2. Once the activation is complete, you can use the various capabilities of chatGPT through xally_server.
 
+
+#### How to deploy xally_server on server side(Optional)
+- You can deploy xally_server on Debina/Ubuntu as shown below. For the other OS, please refer to this as the refference.
+```bash
+## setup environment variable XALLY_HOME, please replace XALLY_HOME with your real oath
+export XALLY_HOME=/home/your_user_name/xally
+
+## create log folder
+mkdir $XALLY_HOME/logs
+
+## run service xally_server
+nohup $XALLY_HOME/build/bin/xally_server -f $XALLY_HOME/xally_server.yaml > $XALLY_HOME/logs/xally_server.log 2>&1 &
+
+## restart nginx
+sudo systemctl reload nginx
+
+## kill process by name
+ps ax|grep xally_server|grep -v grep | awk '{print $1}' | xargs kill
+```
 
 #### Tips for using
 

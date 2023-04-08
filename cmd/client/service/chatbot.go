@@ -300,9 +300,9 @@ func (bot *ChatBot) getExecutor(dir string) func(string) {
 				log.Error(err.Error())
 				if config.MyConfig.DebugMode() {
 					bot.Say(err.Error(), false)
-					if len(msg) > 0 {
-						bot.Say(msg, need_dump)
-					}
+				}
+				if len(msg) > 0 {
+					bot.Say(msg, need_dump)
 				}
 			} else {
 				if len(msg) > 0 {

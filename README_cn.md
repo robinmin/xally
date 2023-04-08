@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.1.6)
+(v0.1.7)
 [TOC]
 
 <div align="center">
@@ -39,6 +39,17 @@ scoop install robinmin/xally
   go get -u github.com/robinmin/xally
   make build
   ```
+
+#### 如何使用中心化共享模式
+如果你采用中心化共享模式，则在首次使用xally之前需要在xally中使用如下命令注册：
+```bash
+## 启动xally后，在xally中输入如下命令
+config-email [your_email_address] [your_xally_server_address]
+```
+请将上述的`your_email_address`用真实email地址替换，`your_xally_server_address`用xally_server服务地址替换（如果你是普通用户，请联系你的管理员）。
+
+完成注册以后，系统会发送一封激活邮件到您的邮箱，点击激活邮件中的激活按钮，则可激活你的用户。一旦激活之后，再回到xally即可正常使用。
+
 
 
 #### 当前特性
@@ -80,7 +91,7 @@ sequenceDiagram
 为方便用户日常使用，可使用`xally --help`命令快速查看主要命令行选项。以下是当前版本的输出：
 ```bash
 $ xally --help
-xally version: xally/0.1.6
+xally version: xally/0.1.7
 Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:
@@ -173,6 +184,7 @@ roles:																						# 本小节用于定义各种预置角色
 
 
 
+
 #### X-Ally-Server YAML文件配置(可选)
 如果无需使用中转服务，则无需配置该文件。默认配置文件会创建在用户主目录下，比如macOS的话会存放在`~/.xally/xally_server.yaml`，如果启动时缺少该文件，系统会自动创建。其他OS以此类推。也可以使用命令行语句`-f`予以指定。默认文件是这样的：
 ```yaml
@@ -207,6 +219,24 @@ server:
 >- 配置xally_server启动完成后，需要从客户端xally首先使用`config-email`指令向该xally_server进行注册。完成注册后，会主动发送激活邮件到注册邮箱进行激活（若配置有direct_email_notify为true）。
 > - 一旦激活完成即可通过xally_server使用chatGPT的各种能力。
 
+#### 如何在服务端部署xally_server(可选)
+- 在Debina/Ubuntu系列机器上，可以参考一下部署：
+```bash
+## setup environment variable XALLY_HOME, please replace XALLY_HOME with your real oath
+export XALLY_HOME=/home/your_user_name/xally
+
+## create log folder
+mkdir $XALLY_HOME/logs
+
+## run service xally_server
+nohup $XALLY_HOME/build/bin/xally_server -f $XALLY_HOME/xally_server.yaml > $XALLY_HOME/logs/xally_server.log 2>&1 &
+
+## restart nginx
+sudo systemctl reload nginx
+
+## kill process by name
+ps ax|grep xally_server|grep -v grep | awk '{print $1}' | xargs kill
+```
 
 
 #### 使用小技巧

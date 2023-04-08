@@ -152,7 +152,9 @@ func (h *APIHandler) reverseProxyHandler(target *url.URL, auth_token string, org
 
 			ctx.Request.Host = target.Host
 
+			log.Info("[X-Ally]" + ctx.Request.Method + " " + ctx.Request.RequestURI + "......>> ")
 			proxy.ServeHTTP(ctx.Writer, ctx.Request)
+			log.Info("[X-Ally]" + ctx.Request.Method + " " + ctx.Request.RequestURI + "<<...... ")
 		} else {
 			h.ResponseRaw(ctx, config.Text("error_invalid_access_denied"), ERR_INVALID_TOKEN, nil, http.StatusUnauthorized)
 		}
@@ -205,23 +207,6 @@ func (h *APIHandler) authMiddleware() gin.HandlerFunc {
 			return
 		}
 		ctx.Request.Header.Del(config.PROXY_TOKEN_NAME)
-
-		// // add auth_user into context
-		// var user_id uint
-		// var err error
-		// if user_id, err = serverdb.GetUserIDByAccessToken(access_token); err != nil {
-		// 	// response to client
-		// 	h.ResponseRaw(ctx, config.Text("error_invalid_token"), ERR_INVALID_TOKEN, nil, http.StatusUnauthorized)
-		// 	return
-		// } else {
-		// 	if auth_user, err := serverdb.GetValidUser(user_id); err != nil {
-		// 		// response to client
-		// 		h.ResponseRaw(ctx, config.Text("error_invalid_token"), ERR_INVALID_TOKEN, nil, http.StatusUnauthorized)
-		// 		return
-		// 	} else {
-		// 		ctx.Set("auth_user", auth_user)
-		// 	}
-		// }
 
 		auth_user := h.WhiteList.GetUserInfoByToken(access_token)
 		if auth_user != nil {
@@ -300,33 +285,3 @@ func (h *APIHandler) authMiddleware() gin.HandlerFunc {
 		}
 	}
 }
-
-// log.Printf("Request: %s %s %s\n", ctx.Request.Method, ctx.Request.URL.String(), ctx.Request.Proto)
-// log.Printf("Response: %d %s\n", ctx.Writer.Status(), blw.body.String())
-
-// func headersToString(headers http.Header) string {
-// 	headersBytes, _ := json.Marshal(headers)
-// 	return string(headersBytes)
-// }
-
-// func bodyToString(req *http.Request) string {
-// 	bodyBytes, _ := ioutil.ReadAll(req.Body)
-// 	req.Body.Close()
-// 	req.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
-// 	return string(bodyBytes)
-// }
-
-// func (h *APIHandler) activateUser() gin.HandlerFunc {
-// 	return func(ctx *gin.Context) {
-// 		token := ctx.Param("token")
-// 		ctx.Writer.WriteHeader(http.StatusOK)
-// 		ctx.Writer.Write([]byte(config.GetPageActivate("/user/activated/" + token)))
-// 	}
-// }
-
-// func (h *APIHandler) completeActivation() gin.HandlerFunc {
-// 	return func(ctx *gin.Context) {
-// 		ctx.Writer.WriteHeader(http.StatusOK)
-// 		ctx.Writer.Write([]byte(config.GetPageActiviated()))
-// 	}
-// }

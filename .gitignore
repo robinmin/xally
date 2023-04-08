@@ -9,6 +9,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 xally_v0.02.gif
+server_cfg.md
 pb/
 build/
 log/

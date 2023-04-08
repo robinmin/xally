@@ -2,7 +2,7 @@ GOCMD=go
 GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
 BINARY_NAME=xally
-VERSION?=0.1.6
+VERSION?=0.1.7
 SERVICE_PORT?=3000
 EXPORT_RESULT?=false # for CI please set EXPORT_RESULT to true
 

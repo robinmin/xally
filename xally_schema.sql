@@ -1,6 +1,6 @@
 
 -- 01, create database
-CREATE DATABASE xally CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE DATABASE xally CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
 
 -- 02, create table xally.auth_users
 -- drop table xally.auth_users
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS xally.auth_users (
     UNIQUE KEY uniq_user (email),
     KEY idx_auth_users_deleted_at (deleted_at),
     KEY idx_auth_users_expired_at (expired_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 03, create table xally.user_tokens
 -- drop table xally.user_tokens
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS xally.user_tokens (
     PRIMARY KEY (id),
     KEY idx_user_tokens_expired_at (expired_at),
     KEY idx_user_tokens_deleted_at (deleted_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- 04, create table xally.proxy_logs
 -- drop table xally.proxy_logs
@@ -66,4 +66,4 @@ CREATE TABLE IF NOT EXISTS xally.proxy_logs (
     response_body           longtext DEFAULT NULL,
 
     PRIMARY KEY (id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;

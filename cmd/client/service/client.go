@@ -210,7 +210,7 @@ func (c *ChatGPTCLient) UserRegistration(email string, endpoint_url string) (str
 					if _, err = config.MyConfig.DumpIntoYAML(temp_file); err != nil {
 						log.Error("Failed to write YAML data into :" + temp_file)
 					}
-					return resp_body, nil
+					return result.Msg, nil
 				}
 			} else {
 				log.Errorf("Failed to register user [%v] : %s ", result.Code, result.Msg)
