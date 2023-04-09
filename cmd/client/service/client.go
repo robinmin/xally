@@ -28,7 +28,7 @@ func (c *ChatGPTCLient) CreateChatCompletion(
 	request gpt3.ChatCompletionRequest,
 ) (response gpt3.ChatCompletionResponse, err error) {
 	model := request.Model
-	if model != gpt3.GPT3Dot5Turbo0301 && model != gpt3.GPT3Dot5Turbo {
+	if model != gpt3.GPT3Dot5Turbo0301 && model != gpt3.GPT3Dot5Turbo && model != gpt3.GPT3TextDavinci003 && model != gpt3.GPT3TextDavinci002 && model != gpt3.GPT3TextCurie001 && model != gpt3.GPT3TextBabbage001 && model != gpt3.GPT3TextAda001 && model != gpt3.GPT3TextDavinci001 && model != gpt3.GPT3Davinci && model != gpt3.GPT3Curie && model != gpt3.GPT3Ada && model != gpt3.GPT3Babbage && model != gpt3.CodexCodeDavinci002 && model != gpt3.CodexCodeCushman001 && model != gpt3.CodexCodeDavinci001 {
 		err = gpt3.ErrChatCompletionInvalidModel
 		return
 	}
@@ -218,4 +218,48 @@ func (c *ChatGPTCLient) UserRegistration(email string, endpoint_url string) (str
 		}
 	}
 	return resp_body, nil
+}
+
+// please refer to this page for limitation:
+//
+//	https://platform.openai.com/docs/models/gpt-3-5
+func (c *ChatGPTCLient) GetMaxTokens(model string) int {
+	switch model {
+	case gpt3.GPT3Dot5Turbo0301:
+		return 4096
+	case gpt3.GPT3Dot5Turbo:
+		return 4096
+	case gpt3.GPT3TextDavinci003:
+		return 4097
+	case gpt3.GPT3TextDavinci002:
+		return 4097
+	case gpt3.GPT3TextCurie001:
+		return 2049
+	case gpt3.GPT3TextBabbage001:
+		return 2049
+	case gpt3.GPT3TextAda001:
+		return 2049
+	case gpt3.GPT3TextDavinci001:
+		return 2049
+	// case gpt3.GPT3DavinciInstructBeta:
+	// 	return 2049
+	case gpt3.GPT3Davinci:
+		return 2049
+	// case gpt3.GPT3CurieInstructBeta:
+	// 	return 2049
+	case gpt3.GPT3Curie:
+		return 2049
+	case gpt3.GPT3Ada:
+		return 2049
+	case gpt3.GPT3Babbage:
+		return 2049
+	case gpt3.CodexCodeDavinci002:
+		return 8001
+	case gpt3.CodexCodeCushman001:
+		return 2048
+	case gpt3.CodexCodeDavinci001:
+		return 8001
+	default:
+		return 4096
+	}
 }

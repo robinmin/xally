@@ -68,82 +68,7 @@ func GetDB() *gorm.DB {
 	return _db.Session(&gorm.Session{NewDB: true})
 }
 
-// func (user *User) SaveUser() (int64, error) {
-// 	tx := DB.Create(&user)
-// 	if tx.Error != nil {
-// 		return 0, tx.Error
-// 	}
-// 	return tx.RowsAffected, nil
-// }
-
-// func extractUserInfo(access_token string) *User {
-// 	access_info, _ := utility.ExtractAccessInfo(config.SvrConfig.Server.AppToken, access_token)
-// 	if access_info == nil {
-// 		log.Error("Faield to extract access information from access token : " + access_token)
-// 		return nil
-// 	}
-
-// 	user := &User{
-// 		// Token:      access_token, // TODO: need to add replace logic here
-// 		UserID:     access_info["uid"].(string),
-// 		Username:   access_info["username"].(string),
-// 		Email:      access_info["email"].(string),
-// 		DeviceInfo: access_info["device_info"].(string),
-// 		Status:     0, // by default, waiting for activate
-// 		RegisterAt: time.Now(),
-// 		ExpiredAt:  time.Now(), // by default, expieried immediately. waiting for activate
-// 	}
-// 	return user
-// }
-
-// func GetUserByToken(access_token string, include_expired bool) (*User, error) {
-// 	user := extractUserInfo(access_token)
-// 	if user == nil {
-// 		msg := "Faield to extract user info from access from access token : " + access_token
-// 		log.Error(msg)
-// 		return nil, errors.New(msg)
-// 	}
-
-// 	var tmp_user User
-// 	tx := DB.Where(&User{
-// 		// Token:      user.Token,
-// 		UserID:     user.UserID,
-// 		Username:   user.Username,
-// 		Email:      user.Email,
-// 		DeviceInfo: user.DeviceInfo,
-// 		Status:     1,
-// 	}).First(&tmp_user)
-// 	if tx.Error != nil {
-// 		log.Error("Failed to query user by access token : " + access_token)
-// 		return nil, tx.Error
-// 	}
-
-// 	if !include_expired && tmp_user.ExpiredAt.Before(time.Now()) {
-// 		return nil, errors.New("Token expired")
-// 	}
-
-// 	return &tmp_user, nil
-// }
-
-// func ActivateUser(access_token string) error {
-// 	tx := DB.Model(&User{}).Where("token = ?", access_token).Update("status", 1)
-// 	if tx.Error != nil {
-// 		log.Error("Failed to activate user")
-// 		return tx.Error
-// 	}
-// 	return nil
-// }
-
-// func DeactivateUser(access_token string) error {
-// 	tx := DB.Model(&User{}).Where("token = ?", access_token).Update("status", 0)
-// 	if tx.Error != nil {
-// 		log.Error("Failed to activate user")
-// 		return tx.Error
-// 	}
-// 	return nil
-// }
-
-// /////////////////////////////////////////////////////////////////////////////
+// ///////////////////////////////////////////////////////////////////////////
 type WhiteList struct {
 	// AvailableUserMap map[string]time.Time
 	AvailableUserMap map[string]WhiteListUser
@@ -338,23 +263,19 @@ func RegisterUser(user_info *model.UserInfo) (*AuthUser, error) {
 	// 	return nil, err
 	// }
 
-	// prepare user registery information
-	user := &AuthUser{
-		Username:   user_info.Username,
-		Hostname:   user_info.Hostname,
-		Email:      user_info.Email,
-		DeviceInfo: user_info.DeviceInfo,
-		Password:   user_info.Password,
-		IsActived:  0,
-		IsVerified: 0,
-
-		RegisterAt: time.Now(),
-		ExpiredAt:  time.Now(), // by default, expieried immediately. waiting for activate
-	}
-
 	if old_user != nil && old_user.ID != 0 {
 		// update user information
-		tx := GetDB().Model(&AuthUser{}).Where("id = ?", old_user.ID).Updates(user)
+		tx := GetDB().Model(&AuthUser{}).Where("id = ?", old_user.ID).Updates(map[string]interface{}{
+			"username":    user_info.Username,
+			"hostname":    user_info.Hostname,
+			"email":       user_info.Email,
+			"device_info": user_info.DeviceInfo,
+			"password":    user_info.Password,
+			"is_actived":  0,
+			"is_verified": 0,
+			"register_at": time.Now(),
+			"expired_at":  time.Now(),
+		})
 		if tx.Error != nil {
 			log.Errorf("Failed to re-register existing user id : %v\n", old_user.ID)
 			return nil, tx.Error
@@ -370,7 +291,19 @@ func RegisterUser(user_info *model.UserInfo) (*AuthUser, error) {
 		return old_user, nil
 	}
 
-	tx := GetDB().Model(&AuthUser{}).Create(user)
+	// prepare user registery information
+	tx := GetDB().Model(&AuthUser{}).Create(&AuthUser{
+		Username:   user_info.Username,
+		Hostname:   user_info.Hostname,
+		Email:      user_info.Email,
+		DeviceInfo: user_info.DeviceInfo,
+		Password:   user_info.Password,
+		IsActived:  0,
+		IsVerified: 0,
+
+		RegisterAt: time.Now(),
+		ExpiredAt:  time.Now(), // by default, expieried immediately. waiting for activate
+	})
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
@@ -416,15 +349,13 @@ func GetValidUser(user_id uint) (*AuthUser, error) {
 }
 
 func ActiviateUser(user_id uint) (int64, error) {
-	updated_user := AuthUser{
-		IsActived:  1,
-		IsVerified: 1,
-		ActivateAt: time.Now(),
-		ExpiredAt:  time.Now().Add(MaxExtendTimes * MaxTokenLifeSpan * time.Hour),
-	}
-	updated_user.UpdatedAt = time.Now()
-
-	tx := GetDB().Model(&AuthUser{}).Where("id = ?", user_id).Updates(updated_user)
+	tx := GetDB().Model(&AuthUser{}).Where("id = ?", user_id).Updates(map[string]interface{}{
+		"is_actived":  1,
+		"is_verified": 1,
+		"activate_at": time.Now(),
+		"expired_at":  time.Now().Add(MaxExtendTimes * MaxTokenLifeSpan * time.Hour),
+		"updated_at":  time.Now(),
+	})
 	if tx.Error != nil {
 		log.Errorf("Failed to activate user id : %v\n", user_id)
 		return 0, tx.Error
@@ -433,14 +364,12 @@ func ActiviateUser(user_id uint) (int64, error) {
 }
 
 func DeactivateUser(user_id uint) (int64, error) {
-	updated_user := AuthUser{
-		IsActived:    0,
-		DeactivateAt: time.Now(),
-		ExpiredAt:    time.Now(),
-	}
-	updated_user.UpdatedAt = time.Now()
-
-	tx := GetDB().Model(&AuthUser{}).Where("id = ?", user_id).Updates(updated_user)
+	tx := GetDB().Model(&AuthUser{}).Where("id = ?", user_id).Updates(map[string]interface{}{
+		"is_actived":    0,
+		"deactivate_at": time.Now(),
+		"expired_at":    time.Now(),
+		"updated_at":    time.Now(),
+	})
 	if tx.Error != nil {
 		log.Errorf("Failed to deactivate user id : %v\n", user_id)
 		return 0, tx.Error

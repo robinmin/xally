@@ -627,8 +627,12 @@ func (bot *ChatBot) Ask(question string) bool {
 
 	utility.ReportEvent(utility.EVT_CLIENT_ASK_CHATGPT, "Asking to chatGPT", nil)
 
+	current_model := bot.role.Model
+	if current_model == "" {
+		current_model = gpt3.GPT3Dot5Turbo
+	}
 	rqst := gpt3.ChatCompletionRequest{
-		Model:     gpt3.GPT3Dot5Turbo,
+		Model:     current_model,
 		Messages:  bot.msg_history,
 		MaxTokens: token_len,
 		// MaxTokens:   3000,
@@ -636,6 +640,12 @@ func (bot *ChatBot) Ask(question string) bool {
 		N:           1,
 	}
 	resp, err := bot.client.CreateChatCompletion(context.Background(), rqst)
+	if err != nil {
+		msg := err.Error()
+		bot.Say(msg, true)
+		log.Error(msg)
+		return need_quit
+	}
 
 	// add chat history
 	var username string
@@ -695,7 +705,7 @@ func (bot *ChatBot) Ask(question string) bool {
 }
 
 func (bot *ChatBot) estimateAvailableTokenNumber(question_leng int) int {
-	available_len := config.MaxTokens - question_leng // - bot.token_counter_total
+	available_len := bot.client.GetMaxTokens(bot.role.Model) - question_leng // - bot.token_counter_total
 
 	for _, msg := range bot.msg_history {
 		available_len = available_len - 4 // every message follows <im_start>{role/name}\n{content}<im_end>\n

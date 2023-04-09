@@ -12,11 +12,13 @@ import (
 // Real constants and can not be changed
 const AppName = "X-Ally"
 const Version = "0.1.7"
-const MaxTokens = 4096
+
+// const MaxTokens = 4096
 const PROXY_TOKEN_NAME = "X-ALLY-TOKEN"
 
 type SysRole struct {
 	Name        string  `yaml:"name,omitempty"`
+	Model       string  `yaml:"model,omitempty"`
 	Avatar      string  `yaml:"avatar,omitempty"`
 	Temperature float32 `yaml:"temperature,omitempty"`
 	TopP        int     `yaml:"top_p,omitempty"`
@@ -94,6 +96,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 			},
 			"architect": {
 				Name:        "architect",
+				Model:       "gpt-3.5-turbo",
 				Avatar:      "🏡",
 				Temperature: 0.2,
 				TopP:        1,
@@ -108,6 +111,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 			},
 			"fullstack": {
 				Name:        "fullstack",
+				Model:       "gpt-3.5-turbo",
 				Avatar:      "🦄",
 				Temperature: 0.2,
 				TopP:        1,
@@ -115,6 +119,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 			},
 			"frontend": {
 				Name:        "frontend",
+				Model:       "gpt-3.5-turbo",
 				Avatar:      "🍏",
 				Temperature: 0.2,
 				TopP:        1,
@@ -122,6 +127,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 			},
 			"backend": {
 				Name:        "backend",
+				Model:       "gpt-3.5-turbo",
 				Avatar:      "🌲",
 				Temperature: 0.2,
 				TopP:        1,
