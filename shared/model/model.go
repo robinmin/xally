@@ -4,7 +4,6 @@ import (
 	"os"
 	"os/user"
 	"time"
-	"unicode/utf8"
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/gin-gonic/gin"
@@ -99,14 +98,6 @@ func (ch *ConversationHistory) LoadResponse(response *gpt3.ChatCompletionRespons
 		ch.LatestChoiceName = response.Choices[len(response.Choices)-1].Message.Name
 		ch.LatestChoiceFinishReason = response.Choices[len(response.Choices)-1].FinishReason
 	}
-}
-
-func TruncateStr(str string, maxLen int) string {
-	if utf8.RuneCountInString(str) > maxLen {
-		// 如果字符串长度超过最大长度，则截取前maxLen个字符
-		return string([]rune(str)[:maxLen])
-	}
-	return str
 }
 
 type UserInfo struct {

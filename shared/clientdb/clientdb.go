@@ -2,6 +2,7 @@ package clientdb
 
 import (
 	"fmt"
+	"unicode/utf8"
 
 	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/model"
@@ -62,7 +63,7 @@ func (cdb *ClientDB) LoadOptionHistory(role_name string) ([]string, error) {
 
 func (cdb *ClientDB) AddOptionHistory(op_history *OptionHistory) bool {
 	if op_history != nil {
-		op_history.Option = model.TruncateStr(op_history.Option, 256)
+		op_history.Option = TruncateStr(op_history.Option, 256)
 		tx := cdb.db.Create(op_history)
 		if tx.Error != nil {
 			log.Error("Failed to add new option history")
@@ -85,4 +86,12 @@ func (cdb *ClientDB) AddChatHistory(chat_history *model.ConversationHistory) boo
 		}
 	}
 	return false
+}
+
+func TruncateStr(str string, maxLen int) string {
+	if utf8.RuneCountInString(str) > maxLen {
+		// 如果字符串长度超过最大长度，则截取前maxLen个字符
+		return string([]rune(str)[:maxLen])
+	}
+	return str
 }
