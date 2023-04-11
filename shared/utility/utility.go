@@ -1,11 +1,9 @@
 package utility
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,10 +16,6 @@ import (
 	"regexp"
 	"strings"
 	"time"
-
-	"golang.org/x/net/html/charset"
-	"golang.org/x/text/encoding"
-	"golang.org/x/text/transform"
 
 	"github.com/charmbracelet/glamour"
 	"github.com/gin-gonic/gin"
@@ -444,31 +438,4 @@ func IsValidURL(url_str string) bool {
 func AcceptJSONResponse(ctx *gin.Context) bool {
 	accpt_type := ctx.Request.Header.Get("Accept")
 	return strings.Contains(strings.ToLower(accpt_type), "application/json")
-}
-
-// encoding determine for html page , eg: gbk gb2312 GB18030
-func determineEncoding(r io.Reader) encoding.Encoding {
-	bytes, err := bufio.NewReader(r).Peek(1024)
-	if err != nil {
-		return nil
-	}
-	e, _, _ := charset.DetermineEncoding(bytes, "")
-	return e
-}
-
-// 将[]byte转换为UTF-8编码
-func ConvertToUTF8(src []byte) ([]byte, error) {
-	// convert byte slice to io.Reader
-	reader := bytes.NewReader(src)
-	enc := determineEncoding(reader)
-	if enc == nil {
-		return nil, errors.New("Failed to get encoding on provided data")
-	}
-
-	utf8Reader := transform.NewReader(reader, enc.NewDecoder())
-	det, err := ioutil.ReadAll(utf8Reader)
-	if err != nil {
-		return nil, err
-	}
-	return det, nil
 }

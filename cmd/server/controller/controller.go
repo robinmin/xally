@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,7 +11,6 @@ import (
 	"net/url"
 	"sync"
 	"time"
-	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -260,22 +260,31 @@ func (h *APIHandler) authMiddleware() gin.HandlerFunc {
 			log.Error("Failed to refresh access token on : " + access_token)
 		}
 
-		// write log into db
-		// 检查[]byte的编码格式
+		// Check that the server actually sent compressed data
+		var reader io.ReadCloser
 		var rsp_body string
-		if !utf8.Valid(blw.body.Bytes()) {
-			// 将[]byte转换为UTF-8编码
-			// rsp_body, _ =
-			if tmp_body, err_cvt := utility.ConvertToUTF8(blw.body.Bytes()); err_cvt == nil {
-				rsp_body = string(tmp_body)
+		var err error
+
+		switch blw.Header().Get("Content-Encoding") {
+		case "gzip":
+			reader, err = gzip.NewReader(blw.body)
+			defer reader.Close()
+			if err != nil {
+				log.Error(err.Error())
+				rsp_body = blw.body.String()
 			} else {
-				log.Error("Faild to convert []byte into sting")
-				rsp_body = fmt.Sprint(blw.body.Bytes())
+				// creates a bytes.Buffer and read from io.Reader
+				buf := &bytes.Buffer{}
+				buf.ReadFrom(reader)
+
+				// retrieve a byte slice from bytes.Buffer
+				rsp_body = string(buf.Bytes())
 			}
-		} else {
+		default:
 			rsp_body = blw.body.String()
 		}
 
+		// write log into db
 		if EnableProxyLog {
 			reqHeaders, _ := json.Marshal(ctx.Request.Header)
 			rspHeaders, _ := json.Marshal(blw.Header())
