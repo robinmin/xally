@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
@@ -260,6 +261,21 @@ func (h *APIHandler) authMiddleware() gin.HandlerFunc {
 		}
 
 		// write log into db
+		// 检查[]byte的编码格式
+		var rsp_body string
+		if !utf8.Valid(blw.body.Bytes()) {
+			// 将[]byte转换为UTF-8编码
+			// rsp_body, _ =
+			if tmp_body, err_cvt := utility.ConvertToUTF8(blw.body.Bytes()); err_cvt == nil {
+				rsp_body = string(tmp_body)
+			} else {
+				log.Error("Faild to convert []byte into sting")
+				rsp_body = fmt.Sprint(blw.body.Bytes())
+			}
+		} else {
+			rsp_body = blw.body.String()
+		}
+
 		if EnableProxyLog {
 			reqHeaders, _ := json.Marshal(ctx.Request.Header)
 			rspHeaders, _ := json.Marshal(blw.Header())
@@ -274,7 +290,7 @@ func (h *APIHandler) authMiddleware() gin.HandlerFunc {
 
 				ResponseStatusCode: blw.Status(),
 				ResponseHeaders:    string(rspHeaders),
-				ResponseBody:       blw.body.String(),
+				ResponseBody:       rsp_body,
 			}
 			plog.RecordRequest()
 		}

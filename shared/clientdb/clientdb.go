@@ -37,11 +37,14 @@ func InitClientDB(db_name string, verbose bool) (*ClientDB, error) {
 	if err != nil {
 		log.Error("Failed to open DB plugin: ", db_name, err)
 	} else {
-		if config.MyConfig.DebugMode() {
-			if err = cdb.db.AutoMigrate(&OptionHistory{}, &model.ConversationHistory{}); err != nil {
-				log.Error(err)
-			}
+		// if config.MyConfig.DebugMode() {
+		if err = cdb.db.AutoMigrate(
+			&OptionHistory{},
+			&model.ConversationHistory{},
+		); err != nil {
+			log.Error(err)
 		}
+		// }
 	}
 	return cdb, err
 }

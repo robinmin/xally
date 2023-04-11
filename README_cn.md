@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.1.7)
+(v0.1.9)
 [TOC]
 
 <div align="center">
@@ -46,9 +46,12 @@ scoop install robinmin/xally
 ## 启动xally后，在xally中输入如下命令
 config-email [your_email_address] [your_xally_server_address]
 ```
-请将上述的`your_email_address`用真实email地址替换，`your_xally_server_address`用xally_server服务地址替换（如果你是普通用户，请联系你的管理员）。
+请将上述的`your_email_address`用真实email地址替换;`your_xally_server_address`则用xally_server服务地址替换（如果你是普通用户，请联系你的管理员）。
 
 完成注册以后，系统会发送一封激活邮件到您的邮箱，点击激活邮件中的激活按钮，则可激活你的用户。一旦激活之后，再回到xally即可正常使用。
+
+#### 如何使用本地单机模式
+使用有自己的openai API key，可直接在主目录下的`{$HOME}/.xally/xally.yaml`文件中修改相应配置即可。具体参见`X-Ally YAML文件配置`。
 
 
 
@@ -91,7 +94,7 @@ sequenceDiagram
 为方便用户日常使用，可使用`xally --help`命令快速查看主要命令行选项。以下是当前版本的输出：
 ```bash
 $ xally --help
-xally version: xally/0.1.7
+xally version: xally/0.1.9
 Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:

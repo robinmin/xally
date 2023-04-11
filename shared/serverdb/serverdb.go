@@ -50,15 +50,15 @@ func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 		// 设置字符集为utf8mb4
 		_db = _db.Set("gorm:table_options", "CHARSET=utf8mb4")
 
-		if config.SvrConfig.DebugMode() {
-			if err = _db.AutoMigrate(
-				&AuthUser{},
-				&UserToken{},
-				&ProxyLog{},
-			); err != nil {
-				log.Error(err)
-			}
+		// if config.SvrConfig.DebugMode() {
+		if err = _db.AutoMigrate(
+			&AuthUser{},
+			&UserToken{},
+			&ProxyLog{},
+		); err != nil {
+			log.Error(err)
 		}
+		// }
 	}
 
 	return _db, err

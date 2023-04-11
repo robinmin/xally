@@ -198,10 +198,12 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 	bot.clientdb, _ = clientdb.InitClientDB(path.Join(config.MyConfig.System.ChatHistoryPath, "xally.db"), verbose)
 
 	api_key := config.MyConfig.System.OpenaiApiKey
-	if !config.MyConfig.IsSharedMode() && api_key == "" {
-		bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
-		return bot
-	}
+
+	// fix: delay to check the api key during the conversation
+	// if !config.MyConfig.IsSharedMode() && api_key == "" {
+	// 	bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
+	// 	return bot
+	// }
 
 	// build the client object with existing API keys and API endpoints
 	api_cfg := gpt3.DefaultConfig(api_key)
@@ -783,8 +785,13 @@ func (bot *ChatBot) initChatHistory(chat_history_path string, prefix string) boo
 func (bot *ChatBot) CheckConnectivity() bool {
 	// always return true when non-shared mode
 	if config.MyConfig.System.UseSharedMode == 0 {
-		bot.connected = true
-		return true
+		if config.MyConfig.System.OpenaiApiKey == "" {
+			bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
+			bot.connected = false
+		} else {
+			bot.connected = true
+		}
+		return bot.connected
 	}
 
 	var msg string

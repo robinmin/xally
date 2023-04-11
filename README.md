@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.1.7)
+(v0.1.9)
 [TOC]
 
 <div align="center">
@@ -51,6 +51,9 @@ Please replace the above `your_email_address` with the real email address and `y
 
 After completing the registration, an activation email will be sent to your email address, click the activation button in the activation email to activate your user. Once activated, you can go back to xally and use it normally.
 
+#### How to use local standalone mode
+Of course, if you have your own openai API key, you can directly modify the corresponding configuration in the `{$HOME}/.xally/xally.yaml` file in the main directory. See `X-Ally YAML file configuration` for details.
+
 #### Features
 
 - Multi-mode access, including local stand-alone mode, centralized sharing model.
@@ -89,7 +92,7 @@ sequenceDiagram
 For daily use, you can use the `xally --help` command to quickly view the main command line options. The following is the output of the current version:
 ```bash
 $ xally --help
-xally version: xally/0.1.7
+xally version: xally/0.1.9
 Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:

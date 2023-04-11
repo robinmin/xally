@@ -10,7 +10,7 @@ var i18n_str_table = map[string]string{
 	"sys_invalid_cmd":    "无效的内部命令或者当前版本不支持",
 	"sys_not_enough_cmd": "没有有效的命令，无法执行(长度大于2)",
 
-	"error_no_chatgpt_key": "缺少环境变量 OPENAI_API_KEY, 请指定或到[openai.com](https://platform.openai.com/account/api-keys)申请",
+	"error_no_chatgpt_key": "缺少环境变量 OPENAI_API_KEY, 请指定或到[openai.com](https://platform.openai.com/account/api-keys)申请。\n如需使用集中共享模式，请首先使用config-email命令注册账户。具体格式为：config-email [your_email_box] [your_service_endpoint]，[]内的内容请替换为你的实际邮箱与服务地址。",
 	"error_no_deepl_key":   "缺少环境变量 DEEPL_API_KEY, 请指定或到[deepl.com](https://www.deepl.com/pro-api?cta=header-pro-api/)申请",
 
 	"error_failed_exec":          "执行命令失败：",
@@ -23,7 +23,7 @@ var i18n_str_table = map[string]string{
 	"error_invalid_params":           "参数无效",
 	"error_invalid_url":              "404 : 无法路由",
 	"error_invalid_http_method":      "405 : 不支持的HTTP方法",
-	"error_invalid_access_denied":    "无权访问",
+	"error_invalid_access_denied":    "无权访问或app_token已过期",
 	"error_invalid_email_register":   "注册失败, 邮箱地址无效或者该域名邮箱不被允许注册",
 	"error_invalid_token":            "无效的激活码或激活码已经过期",
 	"error_user_register_failed":     "注册失败",
@@ -83,7 +83,7 @@ Hello, I am your personal assistant %s, how can I help you?  [ %s ]
 	"sys_invalid_cmd":    "Invalid internal command or not supported by current version",
 	"sys_not_enough_cmd": "nvalid command to execute (length greater than 2)",
 
-	"error_no_chatgpt_key": "Missing environment variable OPENAI_API_KEY, please specify or apply at [openai.com](https://platform.openai.com/account/api-keys)",
+	"error_no_chatgpt_key": "The environment variable OPENAI_API_KEY is missing, please specify it or request it from [openai.com](https://platform.openai.com/account/api-keys). \nIf you want to use the centralized sharing mode, please use the config-email command to register an account first. The specific format is: config-email [your_email_box] [your_service_endpoint], please replace the content in [] with your actual email and service address.",
 	"error_no_deepl_key":   "Missing environment variable DEEPL_API_KEY, please specify or apply at [deepl.com](https://www.deepl.com/pro-api?cta=header-pro-api/)",
 
 	"error_failed_exec":          "Failed to execute command: ",
@@ -96,7 +96,7 @@ Hello, I am your personal assistant %s, how can I help you?  [ %s ]
 	"error_invalid_params":           "Invalid parameters",
 	"error_invalid_url":              "404 : Invalid routes",
 	"error_invalid_http_method":      "405 : Unsupported HTTP methods",
-	"error_invalid_access_denied":    "Access denied",
+	"error_invalid_access_denied":    "Access denied or app_token has expired",
 	"error_invalid_email_register":   "Registration failed, the email address is invalid or the domain email is not allowed to register",
 	"error_invalid_token":            "Invalid activation code or activation code has expired",
 	"error_user_register_failed":     "Registration failed",
@@ -156,7 +156,7 @@ var i18n_str_table_jp = map[string]string{
 	"sys_invalid_cmd":    "不正な内部コマンドまたは現在のバージョンでサポートされていない",
 	"sys_not_enough_cmd": "実行する有効なコマンドがない（長さが2以上）",
 
-	"error_no_chatgpt_key": "環境変数OPENAI_API_KEYが不足しています。指定するか、[openai.com](https://platform.openai.com/account/api-keys)からリクエストしてください。",
+	"error_no_chatgpt_key": "環境変数OPENAI_API_KEYがありません。[openai.com](https://platform.openai.com/account/api-keys)から指定またはリクエストしてください。 \n集中共有モードを使用する場合は、まずconfig-emailコマンドでアカウントを登録してください。 形式は、config-email [your_email_box] [your_service_endpoint] で、[]内の内容は実際のメールとサービスアドレスに置き換えてください。",
 	"error_no_deepl_key":   "環境変数DEEPL_API_KEYがありません。[deepl.com](https://www.deepl.com/pro-api?cta=header-pro-api/)で指定またはリクエストしてください。",
 
 	"error_failed_exec":          "実行失敗：",
@@ -169,7 +169,7 @@ var i18n_str_table_jp = map[string]string{
 	"error_invalid_params":           "無効なパラメータ",
 	"error_invalid_url":              "404 : 無効なルート",
 	"error_invalid_http_method":      "405 : サポートされていないHTTPメソッド",
-	"error_invalid_access_denied":    "アクセス不可",
+	"error_invalid_access_denied":    "アクセス不可か、app_tokenの有効期限が切れています。",
 	"error_invalid_email_register":   "登録に失敗しました。メールアドレスが無効か、ドメインメールの登録が許可されていません。",
 	"error_invalid_token":            "無効なアクティベーションコード、またはアクティベーションコードの有効期限が切れています。",
 	"error_user_register_failed":     "登録に失敗しました",
