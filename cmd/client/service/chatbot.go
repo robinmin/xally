@@ -1,7 +1,6 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -15,9 +14,8 @@ import (
 	"github.com/c-bata/go-prompt"
 	"github.com/fatih/color"
 	strftime "github.com/itchyny/timefmt-go"
-	gpt3 "github.com/sashabaranov/go-openai"
+
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 
 	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/clientdb"
@@ -158,8 +156,8 @@ type ChatBot struct {
 	chat_history_file *os.File
 	chat_history_path string
 
-	client                   *ChatGPTCLient
-	msg_history              []gpt3.ChatCompletionMessage
+	client *ChatGPTCLient
+	// msg_history              []gpt3.ChatCompletionMessage
 	log_history              bool
 	token_counter_total      int
 	token_counter_completion int
@@ -174,11 +172,11 @@ type ChatBot struct {
 
 func NewChatbot(chat_history_path string, name string, role_name string, log_history bool, verbose bool) *ChatBot {
 	bot := &ChatBot{
-		name:                     name,
-		chat_history_file:        nil,
-		chat_history_path:        chat_history_path,
-		client:                   nil,
-		msg_history:              nil,
+		name:              name,
+		chat_history_file: nil,
+		chat_history_path: chat_history_path,
+		client:            NewChatBotClient(config.MyConfig.System.OpenaiApiKey, config.MyConfig.System.APIEndpointOpenai),
+		// msg_history:              nil,
 		log_history:              log_history,
 		token_counter_total:      0,
 		token_counter_completion: 0,
@@ -196,27 +194,6 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 	bot.plugin_mgr.Open()
 
 	bot.clientdb, _ = clientdb.InitClientDB(path.Join(config.MyConfig.System.ChatHistoryPath, "xally.db"), verbose)
-
-	api_key := config.MyConfig.System.OpenaiApiKey
-
-	// fix: delay to check the api key during the conversation
-	// if !config.MyConfig.IsSharedMode() && api_key == "" {
-	// 	bot.Say("- "+config.Text("error_no_chatgpt_key"), true)
-	// 	return bot
-	// }
-
-	// build the client object with existing API keys and API endpoints
-	api_cfg := gpt3.DefaultConfig(api_key)
-	api_endpoint := config.MyConfig.System.APIEndpointOpenai
-	if len(api_endpoint) > 0 {
-		api_cfg.BaseURL = api_endpoint
-	}
-	log.Println("api_cfg.BaseURL  = ", api_cfg.BaseURL)
-	// bot.client = gpt3.NewClientWithConfig(api_cfg)
-	bot.client = &ChatGPTCLient{
-		Client:     *gpt3.NewClientWithConfig(api_cfg),
-		HTTPClient: api_cfg.HTTPClient,
-	}
 
 	var option_history []string
 	var err error
@@ -520,18 +497,8 @@ func (bot *ChatBot) resetRole(role_name string, keep_silent bool) {
 	}
 
 	// refresh role relevant variables
-	bot.msg_history = []gpt3.ChatCompletionMessage{
-		{
-			Role:    "system",
-			Content: bot.role.Prompt,
-		},
-	}
-	if len(bot.role.Opening) > 0 {
-		bot.msg_history = append(bot.msg_history, gpt3.ChatCompletionMessage{
-			Role:    "user",
-			Content: bot.role.Opening,
-		})
-	}
+	bot.client.ResetMsgHistory(bot.role.Prompt, bot.role.Opening)
+
 	bot.token_counter_total = 0
 	bot.token_counter_completion = 0
 	bot.token_counter_prompt = 0
@@ -589,59 +556,30 @@ func (bot *ChatBot) Ask(question string) bool {
 	start := time.Now()
 
 	// avoid token length beyond openai limitation
-	var token_len int
 	var init_msg_len int
-	question_len := len(question)
-
 	if len(bot.role.Opening) > 0 {
 		init_msg_len = 2
 	} else {
 		init_msg_len = 1
 	}
-
-	// adjust available max token length
-	for {
-		token_len = bot.estimateAvailableTokenNumber(question_len)
-		if token_len > 0 {
-			break
-		}
-
-		if len(bot.msg_history) < init_msg_len {
-			// we assume the default configuration is fine
-			bot.resetRole(bot.role.Name, true)
-			token_len = bot.estimateAvailableTokenNumber(len(question))
-
-			if config.MyConfig.DebugMode() {
-				fmt.Println("🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸 resetting role......")
-			}
-			break
-		} else {
-			// popup the old conversation history but key the prompt and the potential opening
-			size_before := len(bot.msg_history)
-			bot.msg_history = slices.Delete(bot.msg_history, init_msg_len, init_msg_len+1)
-
-			if config.MyConfig.DebugMode() {
-				fmt.Print("🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻 erasing old history......")
-				fmt.Printf("%d --> %d\n", size_before, len(bot.msg_history))
-			}
-		}
+	need_reset, token_len := bot.client.AdjustMsgHistory(init_msg_len, len(question), bot.role.Model)
+	if need_reset {
+		// we assume the default configuration is fine
+		bot.resetRole(bot.role.Name, true)
 	}
 
 	utility.ReportEvent(utility.EVT_CLIENT_ASK_CHATGPT, "Asking to chatGPT", nil)
 
-	current_model := bot.role.Model
-	if current_model == "" {
-		current_model = gpt3.GPT3Dot5Turbo
+	// add chat history
+	var username string
+	chat_history := &model.ConversationHistory{}
+	if current_user, err := user.Current(); err == nil {
+		username = current_user.Username
+	} else {
+		username = ""
 	}
-	rqst := gpt3.ChatCompletionRequest{
-		Model:     current_model,
-		Messages:  bot.msg_history,
-		MaxTokens: token_len,
-		// MaxTokens:   3000,
-		Temperature: bot.role.Temperature,
-		N:           1,
-	}
-	resp, err := bot.client.CreateChatCompletion(context.Background(), rqst)
+
+	resp, err := bot.client.CreateChatCompletionEx(bot.role.Model, token_len, bot.role.Temperature, bot.role.Name, username, chat_history)
 	if err != nil {
 		msg := err.Error()
 		bot.Say(msg, true)
@@ -649,17 +587,7 @@ func (bot *ChatBot) Ask(question string) bool {
 		return need_quit
 	}
 
-	// add chat history
-	var username string
-	if current_user, err := user.Current(); err == nil {
-		username = current_user.Username
-	} else {
-		username = ""
-	}
-	chat_history := model.ConversationHistory{}
-	chat_history.LoadRequest(bot.role.Name, username, &rqst)
-	chat_history.LoadResponse(&resp)
-	if !bot.clientdb.AddChatHistory(&chat_history) {
+	if !bot.clientdb.AddChatHistory(chat_history) {
 		log.Error("Failed to write chat history into local database.")
 	}
 
@@ -695,8 +623,8 @@ func (bot *ChatBot) Ask(question string) bool {
 			bot.token_counter_completion,
 			bot.token_counter_total,
 			elapsed/100000000,
-			strings.Repeat("░", len(bot.msg_history)),
-			bot.estimateAvailableTokenNumber(question_len),
+			strings.Repeat("░", bot.client.GetMsgHistoryLength()),
+			bot.client.EstimateAvailableTokenNumber(bot.role.Model, len(question)),
 		)
 		bot.updateHistory("assistant", message)
 
@@ -706,26 +634,9 @@ func (bot *ChatBot) Ask(question string) bool {
 	return need_quit
 }
 
-func (bot *ChatBot) estimateAvailableTokenNumber(question_leng int) int {
-	available_len := bot.client.GetMaxTokens(bot.role.Model) - question_leng // - bot.token_counter_total
-
-	for _, msg := range bot.msg_history {
-		available_len = available_len - 4 // every message follows <im_start>{role/name}\n{content}<im_end>\n
-		// TODO: need to fine tune going forward, replaced with GPT-index instead of length of contents
-		available_len = available_len - len(msg.Content) - len(msg.Name)
-		available_len = available_len - 1 // - len(msg.Role), role is always required and always 1 token
-		available_len = available_len - 2 // every reply is primed with <im_start>assistant
-	}
-
-	return available_len
-}
-
 func (bot *ChatBot) updateHistory(role string, content string) {
 	// update conversation history
-	bot.msg_history = append(bot.msg_history, gpt3.ChatCompletionMessage{
-		Role:    role,
-		Content: content,
-	})
+	bot.client.AddMsgHistory(role, content)
 
 	// dump conversation history if necessary
 	if role == "user" {

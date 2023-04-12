@@ -9,25 +9,66 @@ import (
 	"net/http"
 	"path"
 
+	"github.com/google/uuid"
+	gpt3 "github.com/sashabaranov/go-openai"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/slices"
+
 	"github.com/robinmin/xally/cmd/server/controller"
 	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/model"
 	"github.com/robinmin/xally/shared/utility"
-	gpt3 "github.com/sashabaranov/go-openai"
-	log "github.com/sirupsen/logrus"
 )
 
 type ChatGPTCLient struct {
 	gpt3.Client
-	HTTPClient *http.Client
+
+	HTTPClient  *http.Client
+	msg_history []gpt3.ChatCompletionMessage
 }
 
-// CreateChatCompletion — API call to Create a completion for the chat message.
-func (c *ChatGPTCLient) CreateChatCompletion(
-	ctx context.Context,
-	request gpt3.ChatCompletionRequest,
+func NewChatBotClient(api_key string, api_endpoint string) *ChatGPTCLient {
+	// build the client object with existing API keys and API endpoints
+	api_cfg := gpt3.DefaultConfig(api_key)
+	if len(api_endpoint) > 0 {
+		api_cfg.BaseURL = api_endpoint
+	}
+
+	log.Println("api_cfg.BaseURL  = ", api_cfg.BaseURL)
+	client := &ChatGPTCLient{
+		Client:     *gpt3.NewClientWithConfig(api_cfg),
+		HTTPClient: api_cfg.HTTPClient,
+	}
+	client.ResetMsgHistory("system", "")
+
+	return client
+}
+
+// CreateChatCompletionEx — API call to Create a completion for the chat message.
+func (c *ChatGPTCLient) CreateChatCompletionEx(
+	model string,
+	token_len int,
+	temperature float32,
+	role_name string,
+	username string,
+	chat_history *model.ConversationHistory,
+	// ctx context.Context,
+	// request gpt3.ChatCompletionRequest,
 ) (response gpt3.ChatCompletionResponse, err error) {
-	model := request.Model
+	// current_model := bot.role.Model
+	if model == "" {
+		model = gpt3.GPT3Dot5Turbo
+	}
+	request := gpt3.ChatCompletionRequest{
+		Model:     model,
+		Messages:  c.msg_history,
+		MaxTokens: token_len,
+		// MaxTokens:   3000,
+		Temperature: temperature,
+		N:           1,
+	}
+
+	// model := request.Model
 	if model != gpt3.GPT3Dot5Turbo0301 && model != gpt3.GPT3Dot5Turbo && model != gpt3.GPT3TextDavinci003 && model != gpt3.GPT3TextDavinci002 && model != gpt3.GPT3TextCurie001 && model != gpt3.GPT3TextBabbage001 && model != gpt3.GPT3TextAda001 && model != gpt3.GPT3TextDavinci001 && model != gpt3.GPT3Davinci && model != gpt3.GPT3Curie && model != gpt3.GPT3Ada && model != gpt3.GPT3Babbage && model != gpt3.CodexCodeDavinci002 && model != gpt3.CodexCodeCushman001 && model != gpt3.CodexCodeDavinci001 {
 		err = gpt3.ErrChatCompletionInvalidModel
 		return
@@ -40,12 +81,17 @@ func (c *ChatGPTCLient) CreateChatCompletion(
 	}
 
 	urlSuffix := "/chat/completions"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.fullURL(urlSuffix), bytes.NewBuffer(reqBytes))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, c.fullURL(urlSuffix), bytes.NewBuffer(reqBytes))
 	if err != nil {
 		return
 	}
 
 	err = c.sendRequest(req, &response)
+
+	// chat_history = &model.ConversationHistory{}
+	loadRequest(chat_history, role_name, username, &request)
+	loadResponse(chat_history, &response)
+
 	return
 }
 
@@ -261,5 +307,118 @@ func (c *ChatGPTCLient) GetMaxTokens(model string) int {
 		return 8001
 	default:
 		return 4096
+	}
+}
+
+func (c *ChatGPTCLient) ResetMsgHistory(prompt string, opening string) {
+	// refresh role relevant variables
+	c.msg_history = []gpt3.ChatCompletionMessage{
+		{
+			Role:    "system",
+			Content: prompt,
+		},
+	}
+	if len(opening) > 0 {
+		c.AddMsgHistory("user", opening)
+	}
+}
+
+func (c *ChatGPTCLient) AddMsgHistory(role_name string, content string) {
+	c.msg_history = append(c.msg_history, gpt3.ChatCompletionMessage{
+		Role:    role_name,
+		Content: content,
+	})
+}
+
+func (c *ChatGPTCLient) EstimateAvailableTokenNumber(model string, question_leng int) int {
+	available_len := c.GetMaxTokens(model) - question_leng // - bot.token_counter_total
+
+	for _, msg := range c.msg_history {
+		available_len = available_len - 4 // every message follows <im_start>{role/name}\n{content}<im_end>\n
+		// TODO: need to fine tune going forward, replaced with GPT-index instead of length of contents
+		available_len = available_len - len(msg.Content) - len(msg.Name)
+		available_len = available_len - 1 // - len(msg.Role), role is always required and always 1 token
+		available_len = available_len - 2 // every reply is primed with <im_start>assistant
+	}
+
+	return available_len
+}
+
+func (c *ChatGPTCLient) AdjustMsgHistory(init_msg_len int, question_len int, model string) (bool, int) {
+	var token_len int
+	need_reset := false
+
+	// adjust available max token length
+	for {
+		token_len = c.EstimateAvailableTokenNumber(model, question_len)
+		if token_len > 0 {
+			break
+		}
+
+		if len(c.msg_history) < init_msg_len {
+			// we assume the default configuration is fine
+			// bot.resetRole(bot.role.Name, true)
+			need_reset = true
+			token_len = c.EstimateAvailableTokenNumber(model, question_len)
+
+			if config.MyConfig.DebugMode() {
+				fmt.Println("🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸🌸 resetting role......")
+			}
+			break
+		} else {
+			// popup the old conversation history but key the prompt and the potential opening
+			size_before := len(c.msg_history)
+			c.msg_history = slices.Delete(c.msg_history, init_msg_len, init_msg_len+1)
+
+			if config.MyConfig.DebugMode() {
+				fmt.Print("🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻🌻 erasing old history......")
+				fmt.Printf("%d --> %d\n", size_before, len(c.msg_history))
+			}
+		}
+	}
+	return need_reset, token_len
+}
+
+func (c *ChatGPTCLient) GetMsgHistoryLength() int {
+	return len(c.msg_history)
+}
+
+func loadRequest(ch *model.ConversationHistory, role string, username string, request *gpt3.ChatCompletionRequest) {
+	ch.ID = uuid.New().String()
+	ch.Role = role
+	ch.Username = username
+	if request == nil {
+		return
+	}
+	ch.AIModel = request.Model
+	ch.MsGSize = len(request.Messages)
+	if len(request.Messages) > 0 {
+		ch.LatestMsgRole = request.Messages[len(request.Messages)-1].Role
+		ch.LatestMsgContent = request.Messages[len(request.Messages)-1].Content
+	}
+
+	ch.MaxTokens = request.MaxTokens
+	ch.Temperature = request.Temperature
+	ch.TopP = request.TopP
+	ch.N = request.N
+	ch.User = request.User
+}
+
+func loadResponse(ch *model.ConversationHistory, response *gpt3.ChatCompletionResponse) {
+	if response == nil {
+		return
+	}
+
+	ch.ResponseID = response.ID
+	ch.Object = response.Object
+	ch.ChoiceSize = len(response.Choices)
+	ch.PromptTokens = response.Usage.PromptTokens
+	ch.CompletionTokens = response.Usage.CompletionTokens
+	ch.TotalTokens = response.Usage.TotalTokens
+	if len(response.Choices) > 0 {
+		ch.LatestChoiceRole = response.Choices[len(response.Choices)-1].Message.Role
+		ch.LatestChoiceContent = response.Choices[len(response.Choices)-1].Message.Content
+		ch.LatestChoiceName = response.Choices[len(response.Choices)-1].Message.Name
+		ch.LatestChoiceFinishReason = response.Choices[len(response.Choices)-1].FinishReason
 	}
 }

@@ -7,8 +7,6 @@ import (
 
 	"github.com/denisbrodbeck/machineid"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
-	gpt3 "github.com/sashabaranov/go-openai"
 	"gorm.io/gorm"
 )
 
@@ -58,46 +56,6 @@ type ConversationHistory struct {
 	LatestChoiceContent      string `gorm:"type:text;" json:"latest_choice_content,omitempty"`
 	LatestChoiceName         string `gorm:"type:varchar(64);" json:"latest_choice_name,omitempty"`
 	LatestChoiceFinishReason string `gorm:"type:varchar(256);" json:"latest_choice_finish_reason,omitempty"`
-}
-
-func (ch *ConversationHistory) LoadRequest(role string, username string, request *gpt3.ChatCompletionRequest) {
-	ch.ID = uuid.New().String()
-	ch.Role = role
-	ch.Username = username
-	if request == nil {
-		return
-	}
-	ch.AIModel = request.Model
-	ch.MsGSize = len(request.Messages)
-	if len(request.Messages) > 0 {
-		ch.LatestMsgRole = request.Messages[len(request.Messages)-1].Role
-		ch.LatestMsgContent = request.Messages[len(request.Messages)-1].Content
-	}
-
-	ch.MaxTokens = request.MaxTokens
-	ch.Temperature = request.Temperature
-	ch.TopP = request.TopP
-	ch.N = request.N
-	ch.User = request.User
-}
-
-func (ch *ConversationHistory) LoadResponse(response *gpt3.ChatCompletionResponse) {
-	if response == nil {
-		return
-	}
-
-	ch.ResponseID = response.ID
-	ch.Object = response.Object
-	ch.ChoiceSize = len(response.Choices)
-	ch.PromptTokens = response.Usage.PromptTokens
-	ch.CompletionTokens = response.Usage.CompletionTokens
-	ch.TotalTokens = response.Usage.TotalTokens
-	if len(response.Choices) > 0 {
-		ch.LatestChoiceRole = response.Choices[len(response.Choices)-1].Message.Role
-		ch.LatestChoiceContent = response.Choices[len(response.Choices)-1].Message.Content
-		ch.LatestChoiceName = response.Choices[len(response.Choices)-1].Message.Name
-		ch.LatestChoiceFinishReason = response.Choices[len(response.Choices)-1].FinishReason
-	}
 }
 
 type UserInfo struct {
