@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"strconv"
 
 	"github.com/google/uuid"
 	gpt3 "github.com/sashabaranov/go-openai"
@@ -23,8 +24,53 @@ import (
 type ChatGPTCLient struct {
 	gpt3.Client
 
-	HTTPClient  *http.Client
-	msg_history []gpt3.ChatCompletionMessage
+	HTTPClient     *http.Client
+	msg_history    []gpt3.ChatCompletionMessage
+	support_models map[string]ModelData
+}
+
+type ObjectType string
+
+const (
+	OTModel           ObjectType = "model"
+	OTModelPermission ObjectType = "model_permission"
+	OTList            ObjectType = "list"
+	OTEdit            ObjectType = "edit"
+	OTTextCompletion  ObjectType = "text_completion"
+	OTEEmbedding      ObjectType = "embedding"
+	OTFile            ObjectType = "file"
+	OTFineTune        ObjectType = "fine-tune"
+	OTFineTuneEvent   ObjectType = "fine-tune-event"
+)
+
+type ModelData struct {
+	ID         string            `json:"id"`
+	Object     ObjectType        `json:"object"`
+	Created    int64             `json:"created"`
+	OwnedBy    string            `json:"owned_by"`
+	Permission []ModelPermission `json:"permission"`
+	Root       string            `json:"root"`
+	Parent     string            `json:"parent"`
+}
+
+type ModelPermission struct {
+	ID                 string     `json:"id"`
+	Object             ObjectType `json:"object"`
+	Created            int64      `json:"created"`
+	AllowCreateEngine  bool       `json:"allow_create_engine"`
+	AllowSampling      bool       `json:"allow_sampling"`
+	AllowLogProbs      bool       `json:"allow_logprobs"`
+	AllowSearchIndices bool       `json:"allow_search_indices"`
+	AllowView          bool       `json:"allow_view"`
+	AllowFineTuning    bool       `json:"allow_fine_tuning"`
+	Organization       string     `json:"organization"`
+	Group              string     `json:"group"`
+	IsBlocking         bool       `json:"is_blocking"`
+}
+
+type ModelsListResponse struct {
+	Data   []ModelData `json:"data"`
+	Object ObjectType
 }
 
 func NewChatBotClient(api_key string, api_endpoint string) *ChatGPTCLient {
@@ -36,8 +82,9 @@ func NewChatBotClient(api_key string, api_endpoint string) *ChatGPTCLient {
 
 	log.Println("api_cfg.BaseURL  = ", api_cfg.BaseURL)
 	client := &ChatGPTCLient{
-		Client:     *gpt3.NewClientWithConfig(api_cfg),
-		HTTPClient: api_cfg.HTTPClient,
+		Client:         *gpt3.NewClientWithConfig(api_cfg),
+		HTTPClient:     api_cfg.HTTPClient,
+		support_models: map[string]ModelData{},
 	}
 	client.ResetMsgHistory("system", "")
 
@@ -68,8 +115,10 @@ func (c *ChatGPTCLient) CreateChatCompletionEx(
 		N:           1,
 	}
 
-	// model := request.Model
-	if model != gpt3.GPT3Dot5Turbo0301 && model != gpt3.GPT3Dot5Turbo && model != gpt3.GPT3TextDavinci003 && model != gpt3.GPT3TextDavinci002 && model != gpt3.GPT3TextCurie001 && model != gpt3.GPT3TextBabbage001 && model != gpt3.GPT3TextAda001 && model != gpt3.GPT3TextDavinci001 && model != gpt3.GPT3Davinci && model != gpt3.GPT3Curie && model != gpt3.GPT3Ada && model != gpt3.GPT3Babbage && model != gpt3.CodexCodeDavinci002 && model != gpt3.CodexCodeCushman001 && model != gpt3.CodexCodeDavinci001 {
+	// fetch support models at the first time
+	c.getSupportModels()
+
+	if _, ok := c.support_models[model]; !ok {
 		err = gpt3.ErrChatCompletionInvalidModel
 		return
 	}
@@ -93,6 +142,35 @@ func (c *ChatGPTCLient) CreateChatCompletionEx(
 	loadResponse(chat_history, &response)
 
 	return
+}
+
+func (c *ChatGPTCLient) getSupportModels() error {
+	if len(c.support_models) > 0 {
+		return nil
+	}
+
+	// fetch available models
+	hdr := map[string]string{
+		"Authorization": fmt.Sprintf("Bearer %s", config.MyConfig.System.OpenaiApiKey),
+	}
+
+	resp_code, resp_body, err := utility.FetchURL("GET", c.fullURL("/models"), "", hdr)
+	if resp_code == http.StatusOK {
+		var list_models ModelsListResponse
+		err = json.Unmarshal([]byte(resp_body), &list_models)
+		if err != nil {
+			log.Error("Failed to unmarshal HTTP response body: " + err.Error())
+		} else {
+			for _, model := range list_models.Data {
+				log.Debug(model.Object, " : ", model.ID)
+				c.support_models[model.ID] = model
+			}
+		}
+	} else {
+		log.Error("Failed to list all models")
+		err = errors.New("Failed to list all models, invalid response code: " + strconv.Itoa(resp_code))
+	}
+	return err
 }
 
 func (c *ChatGPTCLient) fullURL(suffix string) string {
