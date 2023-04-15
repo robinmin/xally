@@ -368,7 +368,7 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 		fallthrough
 	case PLUGIN_NAME_FILE_TRANSLATE_JP:
 		if len(original_msg) > len(arr_cmd[0]) {
-			log.Debug("Execute [%s] command on : ", arr_cmd[0], original_msg)
+			log.Debugf("Execute [%s] command on : %s", arr_cmd[0], original_msg)
 
 			bot.Say("> "+strings.ReplaceAll(original_msg, "\n", "\n> ")+"\n", true)
 			if need_quit := bot.Ask(original_msg); need_quit {

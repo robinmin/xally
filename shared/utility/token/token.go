@@ -12,7 +12,7 @@ import (
 func GenerateAccessToken(app_token string, email string) (string, error) {
 	user_info, err := model.NewUserInfo(app_token, email, "")
 	if err != nil {
-		log.Error("Failed to get current user information: %v", err.Error())
+		log.Error("Failed to get current user information: " + err.Error())
 		return "", err
 	}
 

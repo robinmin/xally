@@ -1,7 +1,6 @@
 package utility
 
 import (
-	"fmt"
 	"net/http"
 	"os/user"
 	"time"
@@ -57,13 +56,13 @@ func InitSentry(dsn string, is_client bool) error {
 		TracesSampleRate: 1.0,
 	})
 	if err != nil {
-		return fmt.Errorf("Failed to initialize sentry: %v", err)
+		return err
 	}
 
 	if is_client {
 		// get user id
 		if current_user, err := user.Current(); err != nil {
-			log.Error("Failed to get current user information: %v", err.Error())
+			log.Error("Failed to get current user information: " + err.Error())
 		} else {
 			sentry.ConfigureScope(func(scope *sentry.Scope) {
 				scope.SetUser(sentry.User{

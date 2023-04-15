@@ -329,7 +329,7 @@ func getUserByEmail(email string) (*AuthUser, error) {
 	var tmp_user AuthUser
 	tx := GetDB().Model(&AuthUser{}).Where("email = ?", email).First(&tmp_user)
 	if tx.Error != nil {
-		log.Errorf("Failed to query user by email: %d\n", email)
+		log.Errorf("Failed to query user by email: %s\n", email)
 		return nil, tx.Error
 	}
 
