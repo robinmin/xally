@@ -1,15 +1,21 @@
 # X-Ally
 
-(v0.1.9)
+(v0.1.11)
 [TOC]
 
 <div align="center">
   <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" width="20%" alt="Logo" />
 </div>
 
+<a href="https://www.producthunt.com/posts/x-ally?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-x&#0045;ally" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=389395&theme=light" alt="X&#0045;Ally - A&#0032;cool&#0032;command&#0032;line&#0032;client&#0032;and&#0032;relay&#0032;server&#0032;for&#0032;ChatGPT | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
 [English version](README.md)
 
-X-Ally是一个命令行界面的AI集成工具，用于辅助基于文本文字的各项工作，包括程序员、作者、翻译者以及其他各类文本内容生产者。目前主要已集成 [openai.com](https://openai.com/)  chatGPT、 [deepl.com](https://www.deepl.com/)。后续会有更多自研、三方工具集成。
+X-Ally是一个优雅的命令行客户端和中继服务器，用于[openai.com](https://openai.com/) ChatGPT。它提供：
+- 支持mac/linux/windows；
+- 本地模式和集中共享模式（避免在一个小组/组织内共享openai密钥）；
+- 以Markdown格式记录本地的对话。如果你需要，超级容易与Obsidian整合；
+- 基于角色的配置提示管理，一旦配置好，每天都可以使用。
 
 
 #### 安装
@@ -94,7 +100,7 @@ sequenceDiagram
 为方便用户日常使用，可使用`xally --help`命令快速查看主要命令行选项。以下是当前版本的输出：
 ```bash
 $ xally --help
-xally version: xally/0.1.9
+xally version: xally/0.1.11
 Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:

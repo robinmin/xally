@@ -1,15 +1,23 @@
 # X-Ally
 
-(v0.1.9)
+(v0.1.11)
 [TOC]
 
 <div align="center">
   <img src="https://cdn.jsdelivr.net/gh/robinmin/imglanding/images/202303261446199.png" width="20%" alt="Logo" />
 </div>
 
+<a href="https://www.producthunt.com/posts/x-ally?utm_source=badge-featured&utm_medium=badge&utm_souce=badge-x&#0045;ally" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=389395&theme=light" alt="X&#0045;Ally - A&#0032;cool&#0032;command&#0032;line&#0032;client&#0032;and&#0032;relay&#0032;server&#0032;for&#0032;ChatGPT | Product Hunt" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+
 [中文版](README_cn.md)
 
-X-Ally is an AI-powered TUI (Terminal User Interface) tool designed to streamline tasks. It seamlessly integrates with APIs from both [openai.com](https://openai.com/) and [deepl.com](https://www.deepl.com/), providing users with a more elegant solution.
+
+X-Ally is an elegant command line client and relay server for [openai.com](https://openai.com/) ChatGPT. It provides:
+- mac/linux/windows support;
+- Local mode and centralized sharing mode( to avoid to share openai key within a group / organization);
+- Local logging the conversation in Markdown format. Super easy to integrate with Obsidian if you need;
+- Role-based configuration of prompt management, once configured, used every day.
+
 
 #### Installation
 There are serveral ways to install X-Ally. On macOS/Linux you can install it via [HomeBrew](https://brew.sh/) as shown below:
@@ -92,7 +100,7 @@ sequenceDiagram
 For daily use, you can use the `xally --help` command to quickly view the main command line options. The following is the output of the current version:
 ```bash
 $ xally --help
-xally version: xally/0.1.9
+xally version: xally/0.1.11
 Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:

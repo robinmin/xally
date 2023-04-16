@@ -103,9 +103,9 @@ func (c *ChatGPTCLient) CreateChatCompletionEx(
 	// request gpt3.ChatCompletionRequest,
 ) (response gpt3.ChatCompletionResponse, err error) {
 	// current_model := bot.role.Model
-	if model == "" {
-		model = gpt3.GPT3Dot5Turbo
-	}
+	// if model == "" {
+	model = gpt3.GPT3Dot5Turbo
+	// }
 	request := gpt3.ChatCompletionRequest{
 		Model:     model,
 		Messages:  c.msg_history,
@@ -115,13 +115,13 @@ func (c *ChatGPTCLient) CreateChatCompletionEx(
 		N:           1,
 	}
 
-	// fetch support models at the first time
-	c.getSupportModels()
+	// // fetch support models at the first time
+	// c.getSupportModels()
 
-	if _, ok := c.support_models[model]; !ok {
-		err = gpt3.ErrChatCompletionInvalidModel
-		return
-	}
+	// if _, ok := c.support_models[model]; !ok {
+	// 	err = gpt3.ErrChatCompletionInvalidModel
+	// 	return
+	// }
 
 	var reqBytes []byte
 	reqBytes, err = json.Marshal(request)
