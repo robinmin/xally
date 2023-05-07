@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Real constants and can not be changed
 const ServerName = "X-Ally-Server"
-const ServerVersion = "0.1.11"
+const ServerVersion = "0.2.0"
 
 type ProxyRoute struct {
 	Name    string `yaml:"name"`
@@ -20,6 +21,7 @@ type ProxyRoute struct {
 }
 
 type ServerConfigItems struct {
+	DBDriver                 string       `yaml:"db_driver"`
 	DBHost                   string       `yaml:"db_host"`
 	DBPort                   string       `yaml:"db_port"`
 	DBUser                   string       `yaml:"db_user"`
@@ -137,12 +139,34 @@ func LoadServerConfig(config_file string, verbose bool) (*ServerConfig, error) {
 	return SvrConfig, nil
 }
 
+func IsMySQL() bool {
+	if "mysql" == strings.ToLower(SvrConfig.Server.DBDriver) {
+		return true
+	}
+	return false
+}
+
+func IsSQLite() bool {
+	if "sqlite" == strings.ToLower(SvrConfig.Server.DBDriver) {
+		return true
+	}
+	return false
+}
+
 func GetServerDSN() string {
-	return fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/xally?charset=utf8mb4&parseTime=True&loc=Local",
-		SvrConfig.Server.DBUser,
-		SvrConfig.Server.DBPassword,
-		SvrConfig.Server.DBHost,
-		SvrConfig.Server.DBPort,
-	)
+	if IsMySQL() {
+		return fmt.Sprintf(
+			"%s:%s@tcp(%s:%s)/xally?charset=utf8mb4&parseTime=True&loc=Local",
+			SvrConfig.Server.DBUser,
+			SvrConfig.Server.DBPassword,
+			SvrConfig.Server.DBHost,
+			SvrConfig.Server.DBPort,
+		)
+	}
+
+	if IsSQLite() {
+		return SvrConfig.Server.DBHost
+	}
+
+	return ""
 }
