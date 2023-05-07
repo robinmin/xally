@@ -49,7 +49,7 @@ type AuthUser struct {
 	IsActived  uint   `gorm:"not null; default:0;" json:"is_actived"`
 	IsVerified uint   `gorm:"not null; default:0;" json:"is_verified"`
 
-	RegisterAt   time.Time `gorm:"not null;default:CURRENT_TIMESTAMP()" json:"register_at"`
+	RegisterAt   time.Time `gorm:"autoCreateTime" json:"register_at"`
 	ExpiredAt    time.Time `gorm:"index" json:"expired_at"`
 	ActivateAt   time.Time `json:"activate_at"`
 	DeactivateAt time.Time `json:"deactivate_at"`
