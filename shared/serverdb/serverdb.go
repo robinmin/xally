@@ -6,9 +6,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/glebarez/sqlite" // Pure go SQLite driver, checkout https://github.com/glebarez/sqlite for details
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"gorm.io/driver/mysql"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
@@ -21,7 +23,7 @@ const MaxExtendTimes = 31
 
 var _db *gorm.DB
 
-func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
+func InitServerDB(dialector string, connection_str string, verbose bool) (*gorm.DB, error) {
 	var err error
 	var db_cfg *gorm.Config
 
@@ -36,21 +38,32 @@ func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 		db_cfg = &gorm.Config{}
 	}
 
-	_db, err = gorm.Open(mysql.New(mysql.Config{
-		DSN:                       connection_str, // DSN data source name
-		DefaultStringSize:         256,            // string 类型字段的默认长度
-		DisableDatetimePrecision:  true,           // 禁用 datetime 精度，MySQL 5.6 之前的数据库不支持
-		DontSupportRenameIndex:    true,           // 重命名索引时采用删除并新建的方式，MySQL 5.7 之前的数据库和 MariaDB 不支持重命名索引
-		DontSupportRenameColumn:   true,           // 用 `change` 重命名列，MySQL 8 之前的数据库和 MariaDB 不支持重命名列
-		SkipInitializeWithVersion: false,          // 根据当前 MySQL 版本自动配置
-	}), db_cfg)
-	if err != nil {
+	if config.IsMySQL() {
+		_db, err = gorm.Open(
+			mysql.New(mysql.Config{
+				DSN:                       connection_str, // DSN data source name
+				DefaultStringSize:         256,            // string 类型字段的默认长度
+				DisableDatetimePrecision:  true,           // 禁用 datetime 精度，MySQL 5.6 之前的数据库不支持
+				DontSupportRenameIndex:    true,           // 重命名索引时采用删除并新建的方式，MySQL 5.7 之前的数据库和 MariaDB 不支持重命名索引
+				DontSupportRenameColumn:   true,           // 用 `change` 重命名列，MySQL 8 之前的数据库和 MariaDB 不支持重命名列
+				SkipInitializeWithVersion: false,          // 根据当前 MySQL 版本自动配置
+			}),
+			db_cfg,
+		)
+	}
+
+	if config.IsSQLite() {
+		_db, err = gorm.Open(sqlite.Open(connection_str), db_cfg)
+	}
+
+	if _db == nil || err != nil {
 		log.Error("Failed to connect to database: ", err.Error())
 	} else {
 		// 设置字符集为utf8mb4
-		_db = _db.Set("gorm:table_options", "CHARSET=utf8mb4")
+		if config.IsMySQL() {
+			_db = _db.Set("gorm:table_options", "CHARSET=utf8mb4")
+		}
 
-		// if config.SvrConfig.DebugMode() {
 		if err = _db.AutoMigrate(
 			&AuthUser{},
 			&UserToken{},
@@ -58,7 +71,6 @@ func InitServerDB(connection_str string, verbose bool) (*gorm.DB, error) {
 		); err != nil {
 			log.Error(err)
 		}
-		// }
 	}
 
 	return _db, err
@@ -92,12 +104,16 @@ func (w *WhiteList) LoadWhiteList(interval int64) {
 func (w *WhiteList) updateAll() error {
 	// 从数据库获取最新数据
 	var valid_users []WhiteListUser
+	now := time.Now()
 	err := GetDB().Model(&UserToken{}).Select(
 		"user_tokens.user_id, user_tokens.token, user_tokens.expired_at",
 	).Joins(
 		"inner join auth_users on auth_users.ID = user_tokens.user_id",
 	).Where(
-		"user_tokens.token_type=? and auth_users.is_actived=1 and auth_users.is_verified=1 and now() between user_tokens.created_at and user_tokens.expired_at and now() between auth_users.created_at and auth_users.expired_at", "access",
+		"user_tokens.token_type=? and auth_users.is_actived=1 and auth_users.is_verified=1 and ? between user_tokens.created_at and user_tokens.expired_at and ? between auth_users.created_at and auth_users.expired_at",
+		"access",
+		now,
+		now,
 	).Find(&valid_users).Error
 	if err != nil {
 		log.Error("Failed to get all auth_users on white list ")
@@ -144,12 +160,16 @@ func (w *WhiteList) RefreshToken(old_access_token string) (string, error) {
 
 	// 从数据库获取最新数据
 	var valid_user WhiteListUser
+	now := time.Now()
 	err = GetDB().Model(&UserToken{}).Select(
 		"user_tokens.user_id, user_tokens.token, user_tokens.expired_at",
 	).Joins(
 		"inner join auth_users on auth_users.id = user_tokens.user_id and auth_users.id = ? ", new_access_token.UserID,
 	).Where(
-		"user_tokens.token_type=? and auth_users.is_actived=1 and auth_users.is_verified=1 and now() between user_tokens.created_at and user_tokens.expired_at and now() between auth_users.created_at and auth_users.expired_at", "access",
+		"user_tokens.token_type=? and auth_users.is_actived=1 and auth_users.is_verified=1 and ? between user_tokens.created_at and user_tokens.expired_at and ? between auth_users.created_at and auth_users.expired_at",
+		"access",
+		now,
+		now,
 	).First(&valid_user).Error
 	if err != nil {
 		log.Error("Failed to get current auth_user on white list ")
@@ -194,7 +214,13 @@ func NewAccessToken(user_id uint) (*UserToken, error) {
 
 func GetUserIDByActivationToken(token string) (uint, error) {
 	var tmp_token UserToken
-	tx := GetDB().Model(&UserToken{}).Where("token_type=? and token=? and consume_counter=0 and now() between created_at and expired_at", "activation", token).First(&tmp_token)
+	now := time.Now()
+	tx := GetDB().Model(&UserToken{}).Where(
+		"token_type=? and token=? and consume_counter=0 and ? between created_at and expired_at",
+		"activation",
+		token,
+		now,
+	).First(&tmp_token)
 	if tx.Error != nil {
 		log.Error("Invalid token or token already expired : " + token)
 		return 0, tx.Error
@@ -205,7 +231,13 @@ func GetUserIDByActivationToken(token string) (uint, error) {
 
 func GetUserIDByAccessToken(token string) (uint, error) {
 	var tmp_token UserToken
-	tx := GetDB().Model(&UserToken{}).Where("token_type=? and token=? and now() between created_at and expired_at", "access", token).First(&tmp_token)
+	now := time.Now()
+	tx := GetDB().Model(&UserToken{}).Where(
+		"token_type=? and token=? and ? between created_at and expired_at",
+		"access",
+		token,
+		now,
+	).First(&tmp_token)
 	if tx.Error != nil {
 		tx.Rollback()
 		log.Error("Invalid token or token already expired : " + token)
@@ -217,7 +249,13 @@ func GetUserIDByAccessToken(token string) (uint, error) {
 
 func RefreshAccessToken(token string) (*UserToken, error) {
 	var tmp_token UserToken
-	tx := GetDB().Model(&UserToken{}).Where("token_type=? and token=? and now() between created_at and expired_at", "access", token).First(&tmp_token)
+	now := time.Now()
+	tx := GetDB().Model(&UserToken{}).Where(
+		"token_type=? and token=? and ? between created_at and expired_at",
+		"access",
+		token,
+		now,
+	).First(&tmp_token)
 	if tx.Error != nil {
 		tx.Rollback()
 		log.Error("Invalid token or token already expired : " + token)
@@ -401,17 +439,17 @@ func (user *AuthUser) Logout() error {
 
 type ProxyLog struct {
 	ID                 uint      `gorm:"primary_key"`
-	UserID             uint      `gorm:"not null"`                           // user id
-	RemoteAddr         string    `gorm:"type:varchar(255)"`                  // remote ip address
-	RequestTime        time.Time `gorm:"not null"`                           // 请求时间
-	RequestMethod      string    `gorm:"not null"`                           // 请求方法
-	RequestURL         string    `gorm:"not null"`                           // 请求URL
-	RequestHeaders     string    `gorm:"type:text"`                          // 请求头
-	RequestBody        string    `gorm:"type:longtext"`                      // 请求体
-	ResponseStatusCode int       `gorm:"not null"`                           // 响应状态码
-	ResponseHeaders    string    `gorm:"type:text"`                          // 响应头
-	ResponseBody       string    `gorm:"type:longtext"`                      // 响应体
-	CreatedAt          time.Time `gorm:"not null;default:CURRENT_TIMESTAMP"` // 创建时间
+	UserID             uint      `gorm:"not null"`          // user id
+	RemoteAddr         string    `gorm:"type:varchar(255)"` // remote ip address
+	RequestTime        time.Time `gorm:"not null"`          // 请求时间
+	RequestMethod      string    `gorm:"not null"`          // 请求方法
+	RequestURL         string    `gorm:"not null"`          // 请求URL
+	RequestHeaders     string    `gorm:"type:text"`         // 请求头
+	RequestBody        string    `gorm:"type:longtext"`     // 请求体
+	ResponseStatusCode int       `gorm:"not null"`          // 响应状态码
+	ResponseHeaders    string    `gorm:"type:text"`         // 响应头
+	ResponseBody       string    `gorm:"type:longtext"`     // 响应体
+	CreatedAt          time.Time `gorm:"autoCreateTime"`    // 创建时间
 }
 
 func (plog *ProxyLog) RecordRequest() error {
