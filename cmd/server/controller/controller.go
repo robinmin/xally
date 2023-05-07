@@ -54,13 +54,14 @@ type APIHandler struct {
 func NewAPIHandler(
 	api_secret string,
 	token_lifespan uint32,
+	dialector string,
 	connection_str string,
 	verbose bool,
 ) (*APIHandler, *gin.Engine) {
 	h := &APIHandler{}
 
 	if len(connection_str) > 0 {
-		h.DB, _ = serverdb.InitServerDB(connection_str, verbose)
+		h.DB, _ = serverdb.InitServerDB(dialector, connection_str, verbose)
 	}
 
 	// 初始化白名单
