@@ -418,11 +418,13 @@ func DeactivateUser(user_id uint) (int64, error) {
 func (user *AuthUser) VerifyUser() (*AuthUser, error) {
 	var tmp_user AuthUser
 	// load user information from database by keys
+	now := time.Now()
 	tx := GetDB().Model(&AuthUser{}).Where(
-		"username = ? and email=? device_info=? and is_actived=1 and is_verified=1 and now() between activate_at and expired_at",
+		"username = ? and email=? device_info=? and is_actived=1 and is_verified=1 and ? between activate_at and expired_at",
 		user.Username,
 		user.Email,
 		user.DeviceInfo,
+		now,
 	).First(&tmp_user)
 	if tx.Error != nil {
 		log.Error("Failed to load user information from database by keys")

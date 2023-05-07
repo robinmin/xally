@@ -16,7 +16,7 @@ import (
 // 	Username   string `gorm:"size:64;not null;" json:"username"`
 // 	// Token      string `gorm:"size:512;not null;" json:"token"`
 
-// 	RegisterAt   time.Time `gorm:"not null;default:CURRENT_TIMESTAMP()" json:"register_at"`
+// 	RegisterAt   time.Time `gorm:"autoCreateTime" json:"register_at"`
 // 	ActivateAt   time.Time `json:"activate_at"`
 // 	ExpiredAt    time.Time `gorm:"index" json:"expired_at"`
 // 	DeactivateAt time.Time `json:"deactivate_at"`
