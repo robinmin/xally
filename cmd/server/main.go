@@ -80,10 +80,12 @@ func main() {
 	// gin.DisableConsoleColor()
 
 	if len(config.SvrConfig.Server.SentryDSN) > 0 {
-		utility.InitSentry(config.SvrConfig.Server.SentryDSN, false)
-		defer utility.CloseSentry()
-
-		utility.ReportEvent(utility.EVT_SERVER_INIT, "Enter Server", nil)
+		err := utility.InitSentry(config.SvrConfig.Server.SentryDSN, false)
+		if err == nil {
+			defer utility.CloseSentry()
+			utility.ReportEvent(utility.EVT_SERVER_INIT, "Enter Server", nil)
+		}
+		// do nothing if sentry init failed
 	}
 
 	// 初始化gin框架

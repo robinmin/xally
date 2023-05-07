@@ -86,10 +86,12 @@ func main() {
 
 	func() {
 		if len(config.MyConfig.System.SentryDSN) > 0 {
-			utility.InitSentry(config.MyConfig.System.SentryDSN, true)
-			defer utility.CloseSentry()
-
-			utility.ReportEvent(utility.EVT_SERVER_INIT, "Enter Client", nil)
+			err := utility.InitSentry(config.MyConfig.System.SentryDSN, true)
+			if err == nil {
+				defer utility.CloseSentry()
+				utility.ReportEvent(utility.EVT_SERVER_INIT, "Enter Client", nil)
+			}
+			// do nothing if sentry initialization failed
 		}
 
 		bot := service.NewChatbot(
