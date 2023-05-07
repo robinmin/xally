@@ -80,7 +80,7 @@ func NewChatBotClient(api_key string, api_endpoint string) *ChatGPTCLient {
 		api_cfg.BaseURL = api_endpoint
 	}
 
-	log.Println("api_cfg.BaseURL  = ", api_cfg.BaseURL)
+	log.Debug("api_cfg.BaseURL  = " + api_cfg.BaseURL)
 	client := &ChatGPTCLient{
 		Client:         *gpt3.NewClientWithConfig(api_cfg),
 		HTTPClient:     api_cfg.HTTPClient,
@@ -91,7 +91,21 @@ func NewChatBotClient(api_key string, api_endpoint string) *ChatGPTCLient {
 	return client
 }
 
-// CreateChatCompletionEx — API call to Create a completion for the chat message.
+// check if the model is available
+func (c *ChatGPTCLient) IsAvailable(model string) bool {
+	// fetch support models at the first time
+	err := c.getSupportModels()
+	if err != nil {
+		return false
+	}
+
+	if _, ok := c.support_models[model]; ok {
+		return true
+	}
+	return false
+}
+
+// API call to Create a completion for the chat message.
 func (c *ChatGPTCLient) CreateChatCompletionEx(
 	model string,
 	token_len int,
@@ -102,10 +116,19 @@ func (c *ChatGPTCLient) CreateChatCompletionEx(
 	// ctx context.Context,
 	// request gpt3.ChatCompletionRequest,
 ) (response gpt3.ChatCompletionResponse, err error) {
-	// current_model := bot.role.Model
-	// if model == "" {
-	model = gpt3.GPT3Dot5Turbo
-	// }
+	if config.MyConfig.IsSharedMode() {
+		// only allow gpt-3.5-turbo for shared mode
+		model = gpt3.GPT3Dot5Turbo
+	} else {
+		if model == "" {
+			model = gpt3.GPT3Dot5Turbo
+		}
+		if !c.IsAvailable(model) {
+			err = gpt3.ErrChatCompletionInvalidModel
+			return
+		}
+	}
+
 	request := gpt3.ChatCompletionRequest{
 		Model:     model,
 		Messages:  c.msg_history,
@@ -114,14 +137,6 @@ func (c *ChatGPTCLient) CreateChatCompletionEx(
 		Temperature: temperature,
 		N:           1,
 	}
-
-	// // fetch support models at the first time
-	// c.getSupportModels()
-
-	// if _, ok := c.support_models[model]; !ok {
-	// 	err = gpt3.ErrChatCompletionInvalidModel
-	// 	return
-	// }
 
 	var reqBytes []byte
 	reqBytes, err = json.Marshal(request)
@@ -173,6 +188,19 @@ func (c *ChatGPTCLient) getSupportModels() error {
 	return err
 }
 
+func (c *ChatGPTCLient) ListAllModels() []string {
+	var models []string
+	err := c.getSupportModels()
+	if err != nil {
+		return models
+	}
+
+	for _, model := range c.support_models {
+		models = append(models, model.ID)
+	}
+	return models
+}
+
 func (c *ChatGPTCLient) fullURL(suffix string) string {
 	return fmt.Sprintf("%s%s", config.MyConfig.System.APIEndpointOpenai, suffix)
 }
@@ -202,7 +230,7 @@ func (c *ChatGPTCLient) sendRequest(req *http.Request, val interface{}) error {
 	}
 	acceptLang := req.Header.Get("Accept-Language")
 	if acceptLang == "" {
-		req.Header.Set("Accept-Language", "application/json; charset=utf-8")
+		req.Header.Set("Accept-Language", "zh,en;q=0.9,zh-CN;q=0.8,ja;q=0.7")
 	}
 	// Check whether Content-Type is already set, Upload Files API requires
 	// Content-Type == multipart/form-data
@@ -383,6 +411,14 @@ func (c *ChatGPTCLient) GetMaxTokens(model string) int {
 		return 2048
 	case gpt3.CodexCodeDavinci001:
 		return 8001
+	case "gpt-4":
+		return 8192
+	case "gpt-4-0314":
+		return 8192
+	case "gpt-4-32k":
+		return 32768
+	case "gpt-4-32k-0314":
+		return 32768
 	default:
 		return 4096
 	}
