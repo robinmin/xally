@@ -3,7 +3,7 @@ package config
 var i18n_str_table = map[string]string{
 	"greeting_msg": `# %s (%s)
 
-您好，我是您的私人助理%s, 请问有什么可以帮您？  [ %s ]
+您好，我是您的私人助理%s (%s - %s), 请问有什么可以帮您？  [ %s ]
 `,
 	"byebye_msg": "好的，回头见！👋🏻",
 
@@ -39,6 +39,9 @@ var i18n_str_table = map[string]string{
 	"tips_email_content_activate":    "谢谢您的注册，请点击按钮激活您的账户",
 	"tips_email_content_activate_ok": "您的账户已激活，希望您用X-Ally玩得开心.",
 	"tips_email_content_activate_ng": "用户激活过程中遇到点问题，请联络管理员",
+	"tips_models_shared_limited":     "目前的集中共享模式只支持gpt-3.5-turbo",
+	"tips_models_failed_fetch":       "远程获取当前支持的模型失败",
+	"tips_models_now_support":        "目前支持的模型包括",
 
 	"tips_suggestion_quit":         "退出本程序",
 	"tips_suggestion_reset":        "重置角色为：",
@@ -58,14 +61,15 @@ var i18n_str_table = map[string]string{
 	"tips_suggestion_web_translate_cn": "网页内容翻译为中文",
 	"tips_suggestion_web_translate_en": "网页内容翻译为英文",
 	"tips_suggestion_web_translate_jp": "网页内容翻译为日文",
+	"tips_suggestion_translate":        "用DeepL翻译或查字典",
+	"tips_suggestion_models":           "显示当前API key支持的模型",
 
-	"tips_suggestion_translate": "用DeepL翻译或查字典",
-	"tips_changed_role":         "已为您切换为%s%s, 我的提示词为：\n%s",
-	"tips_not_connected":        "当前尚未链接服务端，请联系您的管理员",
-	"tips_invalid_server":       "无效的服务器地址，请通过config-email命令完成设置和验证",
-	"tips_no_email":             "中心化共享模式时必须有有效的Email地址，请通过config-email命令完成Email设置和验证",
-	"tips_no_app_token":         "app_token无效，请通过config-email命令完成Email设置和验证。如果问题仍然持续，请联系您的管理员",
-	"tips_config_email_usage":   "设定邮件格式请用下面的格式: config-email [你的邮件地址] [你的服务器地址]",
+	"tips_changed_role":       "已为您切换为%s%s (%s), 我的提示词为：\n%s",
+	"tips_not_connected":      "当前尚未链接服务端，请联系您的管理员",
+	"tips_invalid_server":     "无效的服务器地址，请通过config-email命令完成设置和验证",
+	"tips_no_email":           "中心化共享模式时必须有有效的Email地址，请通过config-email命令完成Email设置和验证",
+	"tips_no_app_token":       "app_token无效，请通过config-email命令完成Email设置和验证。如果问题仍然持续，请联系您的管理员",
+	"tips_config_email_usage": "设定邮件格式请用下面的格式: config-email [你的邮件地址] [你的服务器地址]",
 
 	"prompt_content_summary": "请根据后文做内容摘要，并以列表的形式、尽可能精准、简明扼要地逐一列出其要点。如可能给出一句话评语",
 	"prompt_translate_cn":    "请将后文内容翻译为中文，尽量做到精准地道，文中代码部分不要翻译：",
@@ -76,7 +80,7 @@ var i18n_str_table = map[string]string{
 var i18n_str_table_en = map[string]string{
 	"greeting_msg": `# %s (%s)
 
-Hello, I am your personal assistant %s, how can I help you?  [ %s ]
+Hello, I am your personal assistant %s (%s - %s), how can I help you?  [ %s ]
 `,
 	"byebye_msg": "Okay, see you later!👋🏻",
 
@@ -112,6 +116,9 @@ Hello, I am your personal assistant %s, how can I help you?  [ %s ]
 	"tips_email_content_activate":    "Thank you for signing up! Please click the button below to activate your account.",
 	"tips_email_content_activate_ok": "Your account is ready now. Have fun with X-Ally.",
 	"tips_email_content_activate_ng": "If you encounter any problems during the activation process, please contact the administrator",
+	"tips_models_shared_limited":     "The current centralized sharing mode only supports gpt-3.5-turbo",
+	"tips_models_failed_fetch":       "Failed to list all supported model from remote server",
+	"tips_models_now_support":        "Currently supported models include",
 
 	"tips_suggestion_quit":         "Exit",
 	"tips_suggestion_reset":        "Reset role to: ",
@@ -131,14 +138,15 @@ Hello, I am your personal assistant %s, how can I help you?  [ %s ]
 	"tips_suggestion_web_translate_cn": "Translate web content into Chinese",
 	"tips_suggestion_web_translate_en": "Translate web content into English",
 	"tips_suggestion_web_translate_jp": "Translate web content into Japanese",
+	"tips_suggestion_translate":        "Use DeepL to translate or look up the dictionary",
+	"tips_suggestion_models":           "Show all supported models for current API key",
 
-	"tips_suggestion_translate": "Use DeepL to translate or look up the dictionary",
-	"tips_changed_role":         "Switched to %s%s, my prompt : \n%s",
-	"tips_not_connected":        "No connection to the server, please contact your system administrator.",
-	"tips_invalid_server":       "Invalid server address, please complete the setup and verification via config-email command",
-	"tips_no_email":             "A valid Email address is required for the shared mode, please complete the Email setting and verification through the config-email command.",
-	"tips_no_app_token":         "The app_token is invalid, please complete the Email setup and verification via the config-email command. If the problem still persists, please contact your administrator",
-	"tips_config_email_usage":   "To set up email, use this command format: config-email [your email address] [your server address]",
+	"tips_changed_role":       "Switched to %s%s (%s), my prompt : \n%s",
+	"tips_not_connected":      "No connection to the server, please contact your system administrator.",
+	"tips_invalid_server":     "Invalid server address, please complete the setup and verification via config-email command",
+	"tips_no_email":           "A valid Email address is required for the shared mode, please complete the Email setting and verification through the config-email command.",
+	"tips_no_app_token":       "The app_token is invalid, please complete the Email setup and verification via the config-email command. If the problem still persists, please contact your administrator",
+	"tips_config_email_usage": "To set up email, use this command format: config-email [your email address] [your server address]",
 
 	"prompt_content_summary": "Please make a summary of the following content and list each of its main points into bullet points as concisely as possible. If possible give a one-sentence comment: ",
 	"prompt_translate_cn":    "Please translate the following content into Chinese and make it as accurate and authentic. DO NOT translate the code part of the text: ",
@@ -149,7 +157,7 @@ Hello, I am your personal assistant %s, how can I help you?  [ %s ]
 var i18n_str_table_jp = map[string]string{
 	"greeting_msg": `# %s (%s)
 
-こんにちは、私はあなたのパーソナルアシスタント%sです、あなたのために何ができますか？  [ %s ]
+こんにちは、私はあなたのパーソナルアシスタント%s (%s - %s)です、あなたのために何ができますか？  [ %s ]
 `,
 	"byebye_msg": "じゃあ、またね！👋🏻",
 
@@ -185,6 +193,9 @@ var i18n_str_table_jp = map[string]string{
 	"tips_email_content_activate":    "ご登録いただきありがとうございます！下のボタンをクリックして、アカウントを有効にしてください。",
 	"tips_email_content_activate_ok": "あなたのアカウントは今準備が整っています。X-Allyで楽しんでください。",
 	"tips_email_content_activate_ng": "アクティベーション中に問題が発生した場合は、管理者までご連絡ください",
+	"tips_models_shared_limited":     "現在の集中共有モデルは、gpt-3.5-turboにのみ対応しています",
+	"tips_models_failed_fetch":       "リモートサーバーの対応モデル一覧に失敗しました",
+	"tips_models_now_support":        "現在対応しているモデルは以下の通り",
 
 	"tips_suggestion_quit":         "終了する",
 	"tips_suggestion_reset":        "役割をリセットして：",
@@ -204,14 +215,15 @@ var i18n_str_table_jp = map[string]string{
 	"tips_suggestion_web_translate_cn": "ウェブページ内容を中国語への翻訳",
 	"tips_suggestion_web_translate_en": "ウェブページ内容を英語への翻訳",
 	"tips_suggestion_web_translate_jp": "ウェブページ内容を日本語への翻訳",
+	"tips_suggestion_translate":        "DeepLで翻訳する、または辞書を調べて",
+	"tips_suggestion_models":           "APIキーが現在サポートしているモデルを表示する",
 
-	"tips_suggestion_translate": "DeepLで翻訳する、または辞書を調べて",
-	"tips_changed_role":         "%s%sに切り替えました、私のプロンプトワードは : \n%s",
-	"tips_not_connected":        "サーバーと接続していないのため、システム管理者にお問い合わせください",
-	"tips_invalid_server":       "サーバーアドレスが無効です。config-emailコマンドで設定と確認を完了してください。",
-	"tips_no_email":             "集中共有モードでは、有効な電子メールアドレスが必要です。config-emailコマンドを使用して、電子メールアドレスの設定と確認をしてください。",
-	"tips_no_app_token":         "app_tokenが無効です。config-emailコマンドでEmailの設定と検証を完了してください。 問題が解決しない場合は、管理者に連絡してください。",
-	"tips_config_email_usage":   "メールの設定は、次のコマンド形式で行います：config-email [あなたのメールアドレス] [あなたのサーバーアドレス]。",
+	"tips_changed_role":       "%s%s (%s)に切り替えました、私のプロンプトワードは : \n%s",
+	"tips_not_connected":      "サーバーと接続していないのため、システム管理者にお問い合わせください",
+	"tips_invalid_server":     "サーバーアドレスが無効です。config-emailコマンドで設定と確認を完了してください。",
+	"tips_no_email":           "集中共有モードでは、有効な電子メールアドレスが必要です。config-emailコマンドを使用して、電子メールアドレスの設定と確認をしてください。",
+	"tips_no_app_token":       "app_tokenが無効です。config-emailコマンドでEmailの設定と検証を完了してください。 問題が解決しない場合は、管理者に連絡してください。",
+	"tips_config_email_usage": "メールの設定は、次のコマンド形式で行います：config-email [あなたのメールアドレス] [あなたのサーバーアドレス]。",
 
 	"prompt_content_summary": "以下の内容を要約し、それぞれの要点をできるだけ簡潔に箇条書きにしてください。可能であれば、1文のコメントを添えてください：",
 	"prompt_translate_cn":    "後者をできるだけ正確に中国語に翻訳し、コード部分は翻訳しないようにしてください：",
