@@ -90,6 +90,7 @@ func main() {
 	api, router := controller.NewAPIHandler(
 		config.SvrConfig.Server.AppToken,
 		config.SvrConfig.Server.AppTokenLifespan,
+		config.SvrConfig.Server.DBDriver,
 		config.GetServerDSN(),
 		verbose,
 	)
