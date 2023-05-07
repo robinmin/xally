@@ -8,6 +8,7 @@ import (
 	"os/user"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -49,6 +50,9 @@ const (
 
 	// Config system setting
 	Config
+
+	// show all supported models
+	Models
 
 	// Reset suggestion
 	Reset
@@ -100,6 +104,9 @@ func get_suggestion_map(role_name string) *map[suggestionType][]prompt.Suggest {
 		},
 		Config: {
 			{Text: "config-email", Description: config.Text("tips_suggestion_config_email")},
+		},
+		Models: {
+			{Text: "models", Description: config.Text("tips_suggestion_models")},
 		},
 		Reset: reset_rolese,
 		Quit: {
@@ -225,7 +232,15 @@ func NewChatbot(chat_history_path string, name string, role_name string, log_his
 	bot.dumpChatHistory("\n")
 
 	flags := strftime.Format(time.Now(), "%m-%d %H:%M ") + config.MyConfig.GetCurrentMode(bot.CheckConnectivity())
-	greeting_msg := fmt.Sprintf(config.Text("greeting_msg"), bot.name, config.Version, bot.name, flags)
+	greeting_msg := fmt.Sprintf(
+		config.Text("greeting_msg"),
+		bot.name,
+		config.Version,
+		bot.name,
+		bot.role.Name,
+		bot.role.Model,
+		flags,
+	)
 	bot.Say(greeting_msg, false)
 
 	return bot
@@ -456,6 +471,20 @@ func (bot *ChatBot) CommandProcessor(original_msg string, arr_cmd []string) (str
 			msg = config.Text("tips_config_email_usage")
 			need_dump = false
 		}
+	case "models":
+		log.Debug("Execute [models] command on : ", original_msg)
+		if config.MyConfig.IsSharedMode() {
+			msg = config.Text("tips_models_shared_limited")
+		} else {
+			models := bot.client.ListAllModels()
+			if models == nil {
+				msg = config.Text("tips_models_failed_fetch")
+			} else {
+				sort.Strings(models)
+				msg = config.Text("tips_models_now_support") + " : \n- " + strings.Join(models, "\n- ")
+			}
+		}
+		need_dump = false
 	default:
 		log.Debug("Execute fallback command on : ", original_msg)
 
@@ -486,13 +515,13 @@ func (bot *ChatBot) resetRole(role_name string, keep_silent bool) {
 		} else {
 			bot.role = role
 			if !keep_silent {
-				bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), config.MyConfig.System.DefaultRole, bot.role.Avatar, bot.role.Prompt), true)
+				bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), config.MyConfig.System.DefaultRole, bot.role.Avatar, bot.role.Model, bot.role.Prompt), true)
 			}
 		}
 	} else {
 		bot.role = role
 		if !keep_silent {
-			bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), role_name, bot.role.Avatar, bot.role.Prompt), true)
+			bot.Say(fmt.Sprintf(config.Text("tips_changed_role"), role_name, bot.role.Avatar, bot.role.Model, bot.role.Prompt), true)
 		}
 	}
 
