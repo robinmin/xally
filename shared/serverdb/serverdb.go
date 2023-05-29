@@ -329,7 +329,7 @@ func RegisterUser(user_info *model.UserInfo) (*AuthUser, error) {
 		return old_user, nil
 	}
 
-	// prepare user registery information
+	// prepare user registry information
 	tx := GetDB().Model(&AuthUser{}).Create(&AuthUser{
 		Username:   user_info.Username,
 		Hostname:   user_info.Hostname,
