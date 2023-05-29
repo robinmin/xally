@@ -6,11 +6,10 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/robinmin/xally/cmd/client/service"
 	"github.com/robinmin/xally/config"
 	"github.com/robinmin/xally/shared/utility"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
