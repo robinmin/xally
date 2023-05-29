@@ -138,7 +138,7 @@ func NewSysConfig(cfg_file string) *SysConfig {
 				Avatar:      "🐸",
 				Temperature: 0.2,
 				TopP:        1,
-				Prompt:      "I want you act as a Senior wechat mini programer. I will descript the request, then you need to generate code in Taro with necesary comments. Please proccess all kinds of fails and exceptions in production level.",
+				Prompt:      "I want you act as a Senior wechat mini programer. I will descript the request, then you need to generate code in Taro with necessary comments. Please proccess all kinds of fails and exceptions in production level.",
 			},
 			"translator_en": {
 				Name:        "translator_en",
