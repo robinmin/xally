@@ -115,7 +115,7 @@ func (h *APIHandler) ResponseRaw(ctx *gin.Context, msg string, biz_code ErrorCod
 
 // RegisterRoutes 注册路由
 func (h *APIHandler) RegisterRoutes(router *gin.Engine, routes *[]config.ProxyRoute) {
-	// set default processer
+	// set default processor
 	router.NoRoute(h.noRouteHandler())
 	router.NoMethod(h.noMethodHandler())
 	router.POST("/user/register/", h.registerUser())
