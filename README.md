@@ -38,7 +38,7 @@ scoop bucket add robinmin https://github.com/robinmin/scoop-bucket.git
 scoop install robinmin/xally
 ```
 
-Meanwhile, you can download it directly from [github download](https://github.com/robinmin/xally/releases/). Or, you can download the source code and comiple it by yourself.
+Meanwhile, you can download it directly from [github download](https://github.com/robinmin/xally/releases/). Or, you can download the source code and compile it by yourself.
 
 ```bash
 # via source code
@@ -101,7 +101,7 @@ For daily use, you can use the `xally --help` command to quickly view the main c
 ```bash
 $ xally --help
 xally version: xally/0.2.0
-Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
+Useage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:
   -c string
