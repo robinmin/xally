@@ -101,7 +101,7 @@ sequenceDiagram
 ```bash
 $ xally --help
 xally version: xally/0.2.0
-Usage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
+Useage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:
   -c string
