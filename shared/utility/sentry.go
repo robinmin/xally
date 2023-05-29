@@ -145,7 +145,7 @@ func getEventConfig(event_id UserDefinedEvent) (bool, *UserDefinedEventMeta) {
 	if meta, ok = sentry_events_meta[event_id]; !ok {
 		// by default report all
 		meta = UserDefinedEventMeta{
-			Name:  "evnt_unkown_report",
+			Name:  "evnt_unknown_report",
 			Level: "debug",
 			Group: "sys",
 		}
