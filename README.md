@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.2.0)
+(v0.2.1)
 [TOC]
 
 <div align="center">
@@ -100,7 +100,7 @@ sequenceDiagram
 For daily use, you can use the `xally --help` command to quickly view the main command line options. The following is the output of the current version:
 ```bash
 $ xally --help
-xally version: xally/0.2.0
+xally version: xally/0.2.1
 Useage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:
@@ -293,6 +293,7 @@ Emacs-like shortcuts are used by default to facilitate accelerated typing, inclu
 
 
 #### Version History
+- v0.2.1 at 2023-05-31 : fix typo
 - v0.2.0 at 2023-05-07 : Support models command, support GPT-4
 - v0.1.0 at 2023-03-16 : refactory and implement local mode and sharing key mode.
 - v0.0.4 at 2023-03-06 : get github release and brew installation ready.

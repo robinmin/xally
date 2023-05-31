@@ -12,7 +12,7 @@ import (
 
 // Real constants and can not be changed
 const ServerName = "X-Ally-Server"
-const ServerVersion = "0.2.0"
+const ServerVersion = "0.2.1"
 
 type ProxyRoute struct {
 	Name    string `yaml:"name"`

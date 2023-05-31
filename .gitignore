@@ -5,6 +5,7 @@ __pycache__/
 
 # C extensions
 *.so
+bard.sh
 
 # Distribution / packaging
 .Python

@@ -1,6 +1,6 @@
 # X-Ally
 
-(v0.2.0)
+(v0.2.1)
 [TOC]
 
 <div align="center">
@@ -100,7 +100,7 @@ sequenceDiagram
 为方便用户日常使用，可使用`xally --help`命令快速查看主要命令行选项。以下是当前版本的输出：
 ```bash
 $ xally --help
-xally version: xally/0.2.0
+xally version: xally/0.2.1
 Useage: xally [-hv] [-f config_file] [-r role] [-d history_path] [-p language_preference] [-c command]
 
 Options:
@@ -295,6 +295,7 @@ ps ax|grep xally_server|grep -v grep | awk '{print $1}' | xargs kill
 
 
 #### 版本历史
+- v0.2.1 at 2023-05-31 : 修正拼写错误
 - v0.2.0 at 2023-05-07 : 支持models命令、支持GPT-4
 - v0.1.0 at 2023-03-16 : 完成重构、支持本地模式及中心化共享模式
 - v0.0.4 at 2023-03-06 : 完成github、brew发布

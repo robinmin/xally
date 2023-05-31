@@ -11,7 +11,7 @@ import (
 
 // Real constants and can not be changed
 const AppName = "X-Ally"
-const Version = "0.2.0"
+const Version = "0.2.1"
 
 // const MaxTokens = 4096
 const PROXY_TOKEN_NAME = "X-ALLY-TOKEN"
